@@ -1,11 +1,13 @@
 import './stijl.css';
 import { HOND_KLEUREN, PONY_KLEUREN } from './figuren/dieren';
-import { initVoorlezen, spreek } from './leren/voorlezen';
+import { initVoorlezen, spreek, stelStemIn } from './leren/voorlezen';
 import { bewaarStand, laadStand } from './opslag/opslag';
 import { Spel } from './spel/Spel';
 import { dierKiezer, sluitScherm, titelScherm, uitlegScherm } from './ui/schermen';
+import { seizoenGroet } from './wereld/seizoen';
 
 const stand = laadStand();
+stelStemIn(stand.stemNaam, stand.stemTempo);
 initVoorlezen();
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -15,7 +17,9 @@ spel.start();
 const computer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 function welkom() {
-  const tekst = `Hoi ${stand.speler}! Volg het bordje naar de Deuren-obby.`;
+  const tekst = spel.seizoen
+    ? seizoenGroet(spel.seizoen, stand.speler)
+    : `Hoi ${stand.speler}! Volg het bordje naar de Deuren-obby.`;
   spel.hud.toonBanner(tekst, () => spreek(tekst), { duur: 7000 });
   spreek(tekst);
 }
@@ -66,7 +70,7 @@ function kiesDieren() {
 
 titelScherm(() => {
   // iOS staat geluid en voorlezen pas toe na een tik.
-  spel.geluid.ontgrendel();
+  spel.startGeluid();
   spel.geluid.klik();
   if (!stand.pony || !stand.puppy) {
     spreek(`Hoi ${stand.speler}! Welkom in Nintes Wereld.`);
@@ -75,6 +79,9 @@ titelScherm(() => {
     speelVerder();
   }
 });
+
+spel.hud.geheimenKnop.addEventListener('click', () => spel.toonGeheimen());
+spel.hud.instellingenKnop.addEventListener('click', () => spel.toonInstellingen());
 
 spel.hud.uitlegKnop.addEventListener('click', () => {
   if (spel.modus !== 'spelen') return;

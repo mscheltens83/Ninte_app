@@ -37,9 +37,10 @@ export function vachtVan(lijst: Vacht[], id: string): Vacht {
 interface Poot {
   groep: THREE.Group;
   fase: number;
+  voor: boolean;
 }
 
-export class Dier {
+export abstract class Dier {
   readonly groep = new THREE.Group();
   readonly kaartje: ReturnType<typeof naamkaartje>;
   protected poten: Poot[] = [];
@@ -50,6 +51,10 @@ export class Dier {
   /** Binnen deze afstand van zijn plekje blijft het dier staan. */
   protected volgAfstand = 0.7;
   protected maxSnelheid = 9;
+  /** Waar een hoedje op het hoofd komt (in de eigen maat van het dier). */
+  abstract readonly hoofdAnker: THREE.Vector3;
+  private aaiTijden: number[] = [];
+  protected speciaal: { soort: 'zoomies' | 'steigeren'; tijd: number; duur: number } | null = null;
 
   constructor(naam: string, kaartjeHoogte: number) {
     this.kaartje = naamkaartje(naam, 0.42);
@@ -67,13 +72,51 @@ export class Dier {
     groep.add(blok(dikte, lengte, dikte, kleur, 0, -lengte / 2, 0));
     groep.add(blok(dikte * 1.08, lengte * 0.16, dikte * 1.08, hoef, 0, -lengte + lengte * 0.08, 0));
     this.groep.add(groep);
-    this.poten.push({ groep, fase });
+    this.poten.push({ groep, fase, voor: z > 0 });
   }
 
-  /** Beweeg richting `doel` (op de grond) en animeer. */
-  update(dt: number, doel: THREE.Vector3) {
+  /**
+   * Aaien. Geeft true terug als er 5 keer snel achter elkaar is geaaid:
+   * dan doet het dier zijn speciale truc.
+   */
+  aai(): boolean {
+    const nu = this.tijd;
+    this.aaiTijden = this.aaiTijden.filter((t) => nu - t < 2.5);
+    this.aaiTijden.push(nu);
+    if (this.aaiTijden.length >= 5 && !this.speciaal) {
+      this.aaiTijden = [];
+      return true;
+    }
+    return false;
+  }
+
+  protected startSpeciaal(soort: 'zoomies' | 'steigeren', duur: number) {
+    this.speciaal = { soort, tijd: 0, duur };
+  }
+
+  /** Beweeg richting `doel` (op de grond) en animeer. `dansen`: meehuppelen. */
+  update(dt: number, doel: THREE.Vector3, dansen = false) {
     this.tijd += dt;
     const pos = this.groep.position;
+    if (this.speciaal) {
+      this.speciaal.tijd += dt;
+      if (this.speciaal.tijd > this.speciaal.duur) {
+        this.speciaal = null;
+        this.groep.rotation.x = 0;
+      }
+    }
+    if (this.speciaal?.soort === 'zoomies') {
+      // Rondjes rennen om de speler heen
+      const t = this.speciaal.tijd * 3.2;
+      doel = new THREE.Vector3(doel.x + Math.cos(t) * 3, doel.y, doel.z + Math.sin(t) * 3);
+    }
+    if (this.speciaal?.soort === 'steigeren') {
+      const k = this.speciaal.tijd / this.speciaal.duur;
+      this.groep.rotation.x = -Math.sin(k * Math.PI) * 0.75;
+      for (const p of this.poten) if (p.voor) p.groep.rotation.x = -Math.sin(k * Math.PI) * 1.3;
+      this.animeerStaart(this.tijd, 1);
+      return;
+    }
     const naar = new THREE.Vector3(doel.x - pos.x, 0, doel.z - pos.z);
     const afstand = naar.length();
 
@@ -84,14 +127,17 @@ export class Dier {
     }
 
     const gewenst = new THREE.Vector3();
-    if (afstand > this.volgAfstand) {
-      const tempo = Math.min(this.maxSnelheid, (afstand - this.volgAfstand) * 2.5 + 1);
+    const zoomies = this.speciaal?.soort === 'zoomies';
+    if (afstand > (zoomies ? 0 : this.volgAfstand)) {
+      const max = zoomies ? 14 : this.maxSnelheid;
+      const tempo = Math.min(max, (afstand - (zoomies ? 0 : this.volgAfstand)) * 2.5 + 1);
       gewenst.copy(naar).normalize().multiplyScalar(tempo);
     }
     this.snelheid.lerp(gewenst, Math.min(1, dt * 6));
     pos.x += this.snelheid.x * dt;
     pos.z += this.snelheid.z * dt;
-    pos.y += (doel.y - pos.y) * Math.min(1, dt * 10);
+    const hup = dansen ? Math.abs(Math.sin(this.tijd * 7)) * 0.45 : 0;
+    pos.y += (doel.y + hup - pos.y) * Math.min(1, dt * 12);
 
     const v = this.snelheid.length();
     if (v > 0.3) {
@@ -113,6 +159,35 @@ export class Dier {
 }
 
 export class Pony extends Dier {
+  readonly hoofdAnker = new THREE.Vector3(0, 2.22, 1.02);
+  private magisch = false;
+
+  steiger() {
+    this.startSpeciaal('steigeren', 1.4);
+  }
+
+  /** Alle gouden hoefijzers gevonden: de pony wordt een eenhoorn met regenboogmanen. */
+  maakMagisch() {
+    if (this.magisch) return;
+    this.magisch = true;
+    const g = this.groep;
+    const parel = new THREE.MeshStandardMaterial({ color: '#fff6d6', emissive: '#ffd6f5', emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.2 });
+    const hoorn = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.55, 10), parel);
+    hoorn.position.set(0, 2.42, 1.3);
+    hoorn.rotation.x = 0.55;
+    g.add(hoorn);
+    const regenboog = ['#ff4d4d', '#ff9a3d', '#ffd93d', '#5cd65c', '#4da6ff', '#7a5cff', '#c05cff'];
+    const boven = new THREE.Vector3(0, 2.13, 0.72);
+    const onder = new THREE.Vector3(0, 1.3, 0.33);
+    regenboog.forEach((kleur, i) => {
+      const p = boven.clone().lerp(onder, i / (regenboog.length - 1));
+      const plukje = blok(0.2, 0.17, 0.26, kleur, p.x, p.y, p.z - 0.05);
+      plukje.rotation.x = 0.45;
+      g.add(plukje);
+      if (i < 4) this.staart.add(blok(0.22, 0.2, 0.22, regenboog[i * 2], 0, -0.08 - i * 0.2, -0.06 - i * 0.05));
+    });
+  }
+
   constructor(naam: string, vacht: Vacht) {
     super(naam, 2.75);
     const g = this.groep;
@@ -155,6 +230,12 @@ export class Pony extends Dier {
 }
 
 export class Puppy extends Dier {
+  readonly hoofdAnker = new THREE.Vector3(0, 1.08, 0.45);
+
+  zoomies() {
+    this.startSpeciaal('zoomies', 3.2);
+  }
+
   constructor(naam: string, vacht: Vacht) {
     super(naam, 1.45);
     this.volgAfstand = 0.5;

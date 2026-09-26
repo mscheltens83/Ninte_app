@@ -6,6 +6,11 @@ export class Geluid {
   private ctx: AudioContext | null = null;
   aan = true;
 
+  /** De audio-context, pas beschikbaar na de eerste tik. */
+  get context(): AudioContext | null {
+    return this.ctx;
+  }
+
   /** Moet vanuit een tik/klik worden aangeroepen (eis van iOS). */
   ontgrendel() {
     try {
@@ -86,6 +91,48 @@ export class Geluid {
 
   fanfare() {
     [523, 659, 784, 1047, 784, 1047].forEach((f, i) => this.toon(f, i * 0.12, i === 5 ? 0.6 : 0.2, 'triangle', 0.22));
+  }
+
+  boing() {
+    this.toon(180, 0, 0.35, 'sine', 0.25, 720);
+    this.toon(360, 0.05, 0.3, 'triangle', 0.08, 900);
+  }
+
+  hinnik() {
+    // Een paardengeluid: een hoge toon die trillend omlaag gaat.
+    if (!this.aan || !this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(950, t);
+    osc.frequency.exponentialRampToValueAtTime(420, t + 0.9);
+    lfo.frequency.value = 22;
+    lfoGain.gain.value = 60;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1200;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.12, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + 1);
+    lfo.stop(t + 1);
+  }
+
+  magie() {
+    [1047, 1319, 1568, 2093, 2637].forEach((f, i) => this.toon(f, i * 0.07, 0.35, 'triangle', 0.1));
+  }
+
+  kist() {
+    this.toon(220, 0, 0.12, 'square', 0.06, 180);
+    [784, 988, 1175, 1568].forEach((f, i) => this.toon(f, 0.15 + i * 0.09, 0.3, 'triangle', 0.14));
   }
 
   blaf() {

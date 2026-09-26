@@ -36,4 +36,16 @@ describe('opslag', () => {
     const vol = { setItem: () => { throw new Error('vol'); } };
     expect(() => bewaarStand(nieuweStand(), vol)).not.toThrow();
   });
+
+  it('vult nieuwe velden aan bij een oude opgeslagen stand', () => {
+    const oud = { versie: 1, speler: 'Ninte', hoefijzers: 7, woorden: {}, pony: null, puppy: null, obbyGehaald: 1, geluidAan: false, uitlegGezien: true };
+    const opslag = { getItem: () => JSON.stringify(oud), setItem: () => {} };
+    const stand = laadStand(opslag);
+    expect(stand.hoefijzers).toBe(7);
+    expect(stand.geluidAan).toBe(false);
+    expect(stand.muziekAan).toBe(true);
+    expect(stand.geheimen).toEqual([]);
+    expect(stand.goudenHoefijzers).toEqual([]);
+    expect(stand.stemTempo).toBe(0.9);
+  });
 });

@@ -182,6 +182,12 @@ tests/
 - ✅ Werkt als app op het beginscherm van de iPad, ook offline.
 - *Klaar als:* zij het uit zichzelf wil spelen en het "een echt spel" vindt. **Nu testen met Ninte!**
 
+### Extra's ✅ gebouwd
+- ✅ Echte muziek: drie nummers van Kevin MacLeod (CC BY 4.0), met overvloeien tussen eiland, obby en geheime plek. De muziek wordt zachter als de stem voorleest.
+- ✅ Instellingen: geluidjes en muziek aan of uit, zelf de mooiste Nederlandse voorleesstem kiezen, tempo langzaam, normaal of snel.
+- ✅ 9 easter eggs met een geheimenboek (⭐): gouden hoefijzers en een eenhoorn, trampoline, palmeilandje, wolkeneiland, schatkist met wachtwoord (spellen!), dansfeest, zoomies en steigeren. Daarnaast seizoensverrassingen.
+- Onderzocht: open-source neurale stemmen (Piper, Chatterbox) als vervanging voor de iPad-stem. Die spraken sommige woorden verkeerd uit (bijvoorbeeld *veulen* als *vullen*), dus voor nu blijft de verbeterde iPad-stem de beste keuze. Wat nog beter werkt, is een echte stem: zie *inspreken* in fase 2.
+
 ### Fase 2: schrijven en dictee
 - **Dictee-springparcours** (paard rijden + woorden typen).
 - **Verhalenboek + Speurneus** (vrij schrijven, daarna zelf foutjes zoeken).

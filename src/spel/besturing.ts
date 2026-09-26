@@ -18,6 +18,9 @@ export class Besturing {
   private camDelta = { x: 0, y: 0, zoom: 0 };
   private springKnop = false;
   private springVraag = false;
+  /** Waar en wanneer elke vinger neerkwam, om tikken te herkennen. */
+  private neergezet = new Map<number, { x: number; y: number; t: number; ver: boolean }>();
+  private tikken: { x: number; y: number }[] = [];
 
   constructor(
     private vlak: HTMLElement,
@@ -75,6 +78,8 @@ export class Besturing {
     this.joystickId = null;
     this.joystickVector = { x: 0, y: 0 };
     this.camPunten.clear();
+    this.neergezet.clear();
+    this.tikken = [];
     this.springKnop = false;
     this.springVraag = false;
     this.springKnopEl.classList.remove('ingedrukt');
@@ -85,6 +90,7 @@ export class Besturing {
   private omlaag(e: PointerEvent) {
     if (!this.aan) return;
     e.preventDefault();
+    this.neergezet.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), ver: false });
     const links = e.clientX < window.innerWidth * 0.45;
     if (e.pointerType !== 'mouse' && links && this.joystickId === null) {
       this.joystickId = e.pointerId;
@@ -104,6 +110,8 @@ export class Besturing {
   }
 
   private beweeg(e: PointerEvent) {
+    const start = this.neergezet.get(e.pointerId);
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 12) start.ver = true;
     if (e.pointerId === this.joystickId) {
       let dx = (e.clientX - this.joystickStart.x) / STRAAL;
       let dy = (e.clientY - this.joystickStart.y) / STRAAL;
@@ -133,6 +141,11 @@ export class Besturing {
   }
 
   private omhoog(e: PointerEvent) {
+    const start = this.neergezet.get(e.pointerId);
+    this.neergezet.delete(e.pointerId);
+    if (start && !start.ver && performance.now() - start.t < 350 && e.type === 'pointerup') {
+      this.tikken.push({ x: e.clientX, y: e.clientY });
+    }
     if (e.pointerId === this.joystickId) {
       this.joystickId = null;
       this.joystickVector = { x: 0, y: 0 };
@@ -181,6 +194,13 @@ export class Besturing {
     const vraag = this.springVraag;
     this.springVraag = false;
     return vraag || this.springKnop || this.toetsen.has('Space');
+  }
+
+  /** Korte tikjes op het scherm (om dieren te aaien). */
+  neemTikken(): { x: number; y: number }[] {
+    const t = this.tikken;
+    this.tikken = [];
+    return t;
   }
 
   /** Hoeveel de camera gedraaid en gezoomd is sinds de vorige keer. */

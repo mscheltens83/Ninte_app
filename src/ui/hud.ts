@@ -6,7 +6,8 @@ function el<T extends HTMLElement>(id: string): T {
 
 export class Hud {
   readonly hud = el<HTMLDivElement>('hud');
-  readonly geluidKnop = el<HTMLButtonElement>('knop-geluid');
+  readonly geheimenKnop = el<HTMLButtonElement>('knop-geheimen');
+  readonly instellingenKnop = el<HTMLButtonElement>('knop-instellingen');
   readonly uitlegKnop = el<HTMLButtonElement>('knop-uitleg');
   private hoefijzers = el<HTMLDivElement>('hoefijzers');
   private aantal = el<HTMLSpanElement>('aantal');
@@ -32,10 +33,6 @@ export class Hud {
       void this.hoefijzers.offsetWidth;
       this.hoefijzers.classList.add('plus');
     }
-  }
-
-  zetGeluid(aan: boolean) {
-    this.geluidKnop.textContent = aan ? '🔊' : '🔇';
   }
 
   /** Toon een tekst bovenin. Met `spreek` verschijnt er een luidsprekerknop. */

@@ -52,19 +52,39 @@ export function beker(): THREE.Group {
 }
 
 interface Deeltje {
-  mesh: THREE.Mesh;
+  mesh: THREE.Object3D;
   snelheid: THREE.Vector3;
   leeftijd: number;
   levensduur: number;
   draai: THREE.Vector3;
+  /** Zweeft omhoog in plaats van te vallen (hartjes). */
+  zweef?: boolean;
 }
 
 const deeltjeGeo = new THREE.BoxGeometry(1, 1, 1);
+
+function hartjesMateriaal(): THREE.SpriteMaterial {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#ff4f8b';
+  ctx.beginPath();
+  ctx.moveTo(32, 56);
+  ctx.bezierCurveTo(4, 36, 4, 10, 20, 10);
+  ctx.bezierCurveTo(28, 10, 32, 16, 32, 20);
+  ctx.bezierCurveTo(32, 16, 36, 10, 44, 10);
+  ctx.bezierCurveTo(60, 10, 60, 36, 32, 56);
+  ctx.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.SpriteMaterial({ map: t, depthWrite: false });
+}
 
 /** Confetti, plonsjes en sterretjes. */
 export class Effecten {
   private deeltjes: Deeltje[] = [];
   private materialen = new Map<string, THREE.MeshBasicMaterial>();
+  private hartMat: THREE.SpriteMaterial | null = null;
 
   constructor(private scene: THREE.Scene) {}
 
@@ -108,11 +128,40 @@ export class Effecten {
     this.spuit(pos, 26, ['#f2d15c', '#e9c46a', '#d4a72c'], 3, 5, 0.16, 1.0);
   }
 
+  goudregen(pos: THREE.Vector3) {
+    this.spuit(pos, 50, ['#ffd23f', '#fff1a8', '#ffb300', '#ffffff'], 4, 8, 0.16, 1.5);
+  }
+
+  /** Regenboogspoor achter de speler. */
+  spoor(pos: THREE.Vector3) {
+    const kleuren = ['#ff4d4d', '#ff9a3d', '#ffd93d', '#5cd65c', '#4da6ff', '#7a5cff'];
+    this.spuit(pos, 2, [kleuren[Math.floor(Math.random() * kleuren.length)]], 0.6, 1.2, 0.18, 0.7);
+  }
+
+  hartjes(pos: THREE.Vector3, aantal = 5) {
+    this.hartMat ??= hartjesMateriaal();
+    for (let i = 0; i < aantal; i++) {
+      const sprite = new THREE.Sprite(this.hartMat);
+      const s = 0.35 + Math.random() * 0.25;
+      sprite.scale.set(s, s, s);
+      sprite.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, Math.random() * 0.3, (Math.random() - 0.5) * 0.8));
+      this.scene.add(sprite);
+      this.deeltjes.push({
+        mesh: sprite,
+        snelheid: new THREE.Vector3((Math.random() - 0.5) * 0.8, 2.2 + Math.random(), (Math.random() - 0.5) * 0.8),
+        leeftijd: 0,
+        levensduur: 1.1 + Math.random() * 0.4,
+        draai: new THREE.Vector3(),
+        zweef: true,
+      });
+    }
+  }
+
   update(dt: number) {
     for (let i = this.deeltjes.length - 1; i >= 0; i--) {
       const d = this.deeltjes[i];
       d.leeftijd += dt;
-      d.snelheid.y -= 14 * dt;
+      d.snelheid.y -= (d.zweef ? 0 : 14) * dt;
       d.snelheid.multiplyScalar(1 - dt * 0.8);
       d.mesh.position.addScaledVector(d.snelheid, dt);
       d.mesh.rotation.x += d.draai.x * dt;

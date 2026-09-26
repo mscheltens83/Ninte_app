@@ -58,7 +58,8 @@ export type ObbyGebeurtenis =
   | { soort: 'goed'; poort: Poort; eersteKeer: boolean }
   | { soort: 'fout'; poort: Poort }
   | { soort: 'inHooi'; poort: Poort }
-  | { soort: 'finish' };
+  | { soort: 'finish' }
+  | { soort: 'terug' };
 
 export class DeurenObby {
   readonly groep = new THREE.Group();
@@ -67,6 +68,10 @@ export class DeurenObby {
   checkpoint: THREE.Vector3;
   private startZone: Botser;
   private finishZone: Botser;
+  private portaalZone: Botser;
+  private opPortaal = false;
+  /** Midden van het finishplatform (bovenkant). */
+  readonly finishPunt: THREE.Vector3;
   private opStart = false;
   private gefinisht = false;
   private marker: THREE.Mesh;
@@ -118,6 +123,20 @@ export class DeurenObby {
     y += 0.4;
     this.vast(8, 0.6, 8, '#ffe082', x + 4, y - 0.6, zc);
     this.finishZone = botserUitBlok(x + 4, y + 1, zc, 8, 2, 8);
+    this.finishPunt = new THREE.Vector3(x + 4, y, zc);
+    // Portaal terug naar het eiland (zoals "back to lobby" in Roblox-obby's)
+    const portaal = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 0.12, 1.8),
+      new THREE.MeshStandardMaterial({ color: '#4da6ff', emissive: '#4da6ff', emissiveIntensity: 0.8 }),
+    );
+    portaal.position.set(x + 6.2, y + 0.06, zc - 2.7);
+    this.groep.add(dynamisch(portaal));
+    this.portaalZone = botserUitBlok(x + 6.2, y + 1, zc - 2.7, 1.4, 2, 1.4);
+    this.groep.add(blokOp(0.12, 1.6, 0.12, '#ffffff', x + 7.3, y, zc - 3.7));
+    const terugBord = tekstBord('Terug naar\nhet eiland', 1.8, 0.9, { breedte: 384, achtergrond: '#ffffff', rand: '#4da6ff' });
+    terugBord.mesh.position.set(x + 7.22, y + 1.9, zc - 3.7);
+    terugBord.mesh.rotation.y = -Math.PI / 2;
+    this.groep.add(terugBord.mesh);
     this.beker = dynamisch(beker());
     this.beker.position.set(x + 5.5, y, zc);
     this.groep.add(this.beker);
@@ -345,8 +364,12 @@ export class DeurenObby {
 
     if (!this.gefinisht && overlapt(this.finishZone, speler)) {
       this.gefinisht = true;
+      this.checkpoint = this.finishPunt.clone();
       uit.push({ soort: 'finish' });
     }
+    const opPortaal = overlapt(this.portaalZone, speler);
+    if (opPortaal && !this.opPortaal) uit.push({ soort: 'terug' });
+    this.opPortaal = opPortaal;
     return uit;
   }
 

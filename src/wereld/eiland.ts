@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Fysica, botserUitBlok } from '../spel/fysica';
 import { blok, blokOp, dynamisch, tekstBord, voegStatischSamen, zaadRng, type Tekstbord } from './bouwstenen';
+import { WACHTWOORD } from './geheimen';
 
 export const EILAND_RAND = 35; // gras loopt van -35 tot 35
 export const WATER_HOOGTE = -0.7;
@@ -24,7 +25,7 @@ function vastBlok(groep: THREE.Group, f: Fysica, b: number, h: number, d: number
 }
 
 /** Bord op twee paaltjes. `hoek` draait het bord om de y-as. */
-function bordOpPalen(groep: THREE.Group, f: Fysica, tekst: string, x: number, z: number, hoek: number, b = 4, h = 1.6) {
+function bordOpPalen(groep: THREE.Group, f: Fysica, tekst: string, x: number, z: number, hoek: number, b = 4, h = 1.6, achterTekst = tekst) {
   const bordGroep = new THREE.Group();
   bordGroep.position.set(x, 0, z);
   bordGroep.rotation.y = hoek;
@@ -36,7 +37,7 @@ function bordOpPalen(groep: THREE.Group, f: Fysica, tekst: string, x: number, z:
   const bord = tekstBord(tekst, b - 0.2, h - 0.2, { breedte: 640 });
   bord.mesh.position.set(0, onder + h / 2, 0.08);
   bordGroep.add(bord.mesh);
-  const achter = tekstBord(tekst, b - 0.2, h - 0.2, { breedte: 640 });
+  const achter = tekstBord(achterTekst, b - 0.2, h - 0.2, { breedte: 640 });
   achter.mesh.position.set(0, onder + h / 2, -0.08);
   achter.mesh.rotation.y = Math.PI;
   bordGroep.add(achter.mesh);
@@ -192,6 +193,8 @@ const VRIJE_ZONES: [number, number, number, number][] = [
   [-30, -12, 0, 15], // wei
   [-7, 7, -2, 16], // startplek en welkomstbord
   [-12, 6, -9, -2], // pad naar de stal
+  [-35, -26, -9, -3], // trampoline achter de stal
+  [-35, -30, -28, -20], // begin van de stapstenen
   [0, 35, 3, 12], // pad naar de obby
   [24, 35, -8, 10], // start van de obby
   [-8, 8, -34, -24], // dorp (binnenkort)
@@ -228,7 +231,8 @@ export function bouwEiland(scene: THREE.Scene, f: Fysica): Eiland {
   groep.add(blokOp(9, 0.03, 3, pad, -10.5, 0, -6, false));
 
   // Borden
-  bordOpPalen(groep, f, 'Welkom in\nNintes Wereld!', 0, 3, 0, 5, 2);
+  // Op de achterkant staat het geheime wachtwoord voor de schatkist.
+  bordOpPalen(groep, f, 'Welkom in\nNintes Wereld!', 0, 3, 0, 5, 2, `Psst... het geheime\nwachtwoord is:\n${WACHTWOORD}`);
   bordOpPalen(groep, f, 'Deuren-obby  →', 5.5, 4.5, 0, 4.2, 1.1);
   bordOpPalen(groep, f, '←  Stal', -5, 4.5, 0, 3, 1.1);
 

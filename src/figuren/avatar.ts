@@ -98,8 +98,27 @@ export class Avatar {
     g.add(blok(0.24, 0.12, 0.24, '#ff5fa2', 0, 2.42, -0.42)); // haarelastiekje
   }
 
-  /** Loop- en springanimatie. `tempo` is 0 (stil) tot 1 (rennen). */
-  animeer(dt: number, tempo: number, inDeLucht: boolean) {
+  /** Waar een hoedje of kroontje op het hoofd komt. */
+  readonly hoofdAnker = new THREE.Vector3(0, 2.58, 0);
+
+  /**
+   * Loop-, spring- en dansanimatie. `tempo` is 0 (stil) tot 1 (rennen).
+   * Geeft terug hoeveel het poppetje omhoog wipt (bij het dansen).
+   */
+  animeer(dt: number, tempo: number, inDeLucht: boolean, dansen = false): number {
+    if (dansen) {
+      this.fase += dt * 7;
+      const f = this.fase;
+      this.linkerArm.rotation.x = -2.7 + Math.sin(f) * 0.35;
+      this.rechterArm.rotation.x = -2.7 - Math.sin(f) * 0.35;
+      this.linkerArm.rotation.z = -0.3 + Math.sin(f * 2) * 0.25;
+      this.rechterArm.rotation.z = 0.3 + Math.sin(f * 2) * 0.25;
+      this.linkerBeen.rotation.x = Math.max(0, Math.sin(f)) * -0.6;
+      this.rechterBeen.rotation.x = Math.max(0, -Math.sin(f)) * -0.6;
+      return Math.abs(Math.sin(f)) * 0.3;
+    }
+    this.linkerArm.rotation.z = 0;
+    this.rechterArm.rotation.z = 0;
     this.fase += dt * 11 * Math.max(tempo, 0.001);
     const zwaai = inDeLucht ? 0.35 : Math.sin(this.fase) * 0.75 * tempo;
     this.linkerBeen.rotation.x = zwaai;
@@ -111,5 +130,6 @@ export class Avatar {
       this.linkerArm.rotation.x = -zwaai;
       this.rechterArm.rotation.x = zwaai;
     }
+    return 0;
   }
 }

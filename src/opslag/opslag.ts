@@ -16,7 +16,15 @@ export interface Spelstand {
   woorden: WoordStats;
   obbyGehaald: number;
   geluidAan: boolean;
+  muziekAan: boolean;
+  /** Naam van de gekozen voorleesstem, of null voor automatisch. */
+  stemNaam: string | null;
+  stemTempo: number;
   uitlegGezien: boolean;
+  /** Gevonden geheimen (easter eggs). */
+  geheimen: string[];
+  /** Welke gouden hoefijzers al gevonden zijn. */
+  goudenHoefijzers: string[];
 }
 
 const SLEUTEL = 'nintes-wereld';
@@ -31,7 +39,12 @@ export function nieuweStand(): Spelstand {
     woorden: {},
     obbyGehaald: 0,
     geluidAan: true,
+    muziekAan: true,
+    stemNaam: null,
+    stemTempo: 0.9,
     uitlegGezien: false,
+    geheimen: [],
+    goudenHoefijzers: [],
   };
 }
 

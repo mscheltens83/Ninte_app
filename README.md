@@ -16,6 +16,25 @@ Het volledige plan staat in [PLAN.md](PLAN.md).
 - **Voorlezen** met de Nederlandse stem van de iPad, net als bij een dictee: woord, zin, woord.
 - Besturing zoals Roblox op de iPad: een joystick links, een springknop rechts en vegen om rond te kijken.
 - Geen game-over, geen tijdsdruk, geen chat en geen aankopen. De voortgang blijft op de iPad zelf bewaard.
+- **Echte muziek**: een vrolijk nummer op het eiland, een snel nummer in de obby en een grappig nummer op een geheime plek.
+- **Instellingen** (⚙️): geluidjes en muziek aan of uit, zelf de mooiste voorleesstem kiezen en het tempo instellen.
+- **Geheimen** (⭐): 9 easter eggs om te ontdekken. Het geheimenboek geeft hints. Spoiler: zie hieronder.
+
+## Geheimen (spoiler, alleen voor ouders!)
+
+| Geheim | Hoe vind je het? | Beloning |
+|---|---|---|
+| 5 gouden hoefijzers | Op de hooitoren in de wei, op het staldak, achter de kratten bij het dorp, op het palmeilandje en op het wolkeneiland | 5 hoefijzers per stuk |
+| Magische pony | Alle 5 gouden hoefijzers vinden | De pony wordt een eenhoorn met regenboogmanen |
+| Boing! | Op de trampoline achter de stal springen (zo kom je ook op het staldak) | Superhoge sprong |
+| Palmeilandje | Via de stapstenen in de noordwesthoek naar het eilandje springen | Een gouden hoefijzer |
+| Wolkeneiland | Bij de finish van de Deuren-obby het wolkenpad omhoog volgen | Regenboog, geheim muziekje, gouden hoefijzer |
+| Schatkist | Het wachtwoord staat op de achterkant van het welkomstbord; de kist staat in de stal. Het wachtwoord moet ze goed spellen! | 20 hoefijzers en een regenboogspoor achter Ninte |
+| Dansfeest | 12 seconden stilstaan | Ninte en de dieren dansen |
+| Zoomies | 5 keer snel op de puppy tikken | De puppy rent rondjes |
+| Steigeren | 5 keer snel op de pony tikken | De pony gaat op zijn achterbenen staan |
+
+Daarnaast zijn er seizoensverrassingen: sneeuw en kerstmutsen in december, oranje vlaggetjes en een kroontje op Koningsdag, en pompoenen rond Halloween.
 
 ## Op de iPad spelen
 
@@ -41,7 +60,7 @@ Speel altijd via het icoon op het beginscherm. Safari kan bewaarde gegevens van 
 ### 3. Handige instellingen op de iPad
 
 - **Autocorrectie uit.** Ga naar Instellingen → Algemeen → Toetsenbord en zet *Autocorrectie* en *Voorspellend* uit. Anders verbetert de iPad haar spelling en leert ze minder. Het spel zet dit zelf ook al uit in zijn tekstvakken.
-- **Mooiere voorleesstem.** Ga naar Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands en download een verbeterde stem (bijvoorbeeld *Xander* of *Claire*). Het spel kiest die dan vanzelf.
+- **Mooiere voorleesstem.** Ga naar Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands en download een stem met *(Verbeterd)* of *(Premium)* achter de naam (bijvoorbeeld *Xander* of *Claire*). Het spel kiest die dan vanzelf. In het spel kun je onder ⚙️ ook zelf een stem kiezen en het tempo instellen.
 - **Liggend spelen** werkt het fijnst, net als bij Roblox.
 
 ## Voor ontwikkelaars
@@ -81,3 +100,13 @@ De woorden staan in `src/leren/woorden.ts`. Een woordkaart ziet er zo uit:
 ```
 
 De foute variant voor de deur (`paart`) en het trucje maakt het spel zelf. `npm test` controleert of elk woord letterlijk in zijn zin staat en of er een foute variant van te maken is.
+
+## Muziek
+
+De muziek is van Kevin MacLeod ([incompetech.com](https://incompetech.com)) en valt onder de licentie [Creative Commons Naamsvermelding 4.0](https://creativecommons.org/licenses/by/4.0/):
+
+- `public/muziek/eiland.mp3`: "Carefree"
+- `public/muziek/obby.mp3`: "Monkeys Spinning Monkeys"
+- `public/muziek/geheim.mp3`: "Fluffing a Duck"
+
+De bestanden zijn omgezet naar mono MP3 (64 kbps), zodat ze snel laden en weinig geheugen gebruiken op de iPad.

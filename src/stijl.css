@@ -527,3 +527,125 @@ button {
   place-items: center;
   font-size: 26px;
 }
+
+/* Link-knop (klein, onderaan een kaart) */
+.link-knop {
+  border: none;
+  background: none;
+  color: var(--paars-donker);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 8px;
+}
+
+/* Instellingen */
+.kaart.instellingen {
+  text-align: left;
+  display: grid;
+  gap: 12px;
+}
+
+.kaart.instellingen h2,
+.kaart.instellingen .knop {
+  text-align: center;
+  justify-self: center;
+}
+
+.kaart h3 {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.rij {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.schakelaar {
+  min-width: 92px;
+  min-height: 48px;
+  border: none;
+  border-radius: 999px;
+  font-size: 19px;
+  font-weight: 800;
+  background: #e4e0f0;
+  color: var(--inkt);
+}
+
+.schakelaar.aan {
+  background: var(--groen);
+  color: #fff;
+}
+
+.stemmen {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.stem,
+.tempo-knop {
+  min-height: 48px;
+  border: 3px solid #e4e0f0;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--inkt);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 14px;
+}
+
+.stem.gekozen,
+.tempo-knop.gekozen {
+  border-color: var(--paars);
+  background: #f1ecff;
+}
+
+.tempo {
+  display: flex;
+  gap: 8px;
+}
+
+.tempo-knop {
+  text-align: center;
+}
+
+.kaart .klein {
+  font-size: 15px;
+  color: #6b6480;
+}
+
+/* Geheimenboek */
+.geheimen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 14px 0 6px;
+  text-align: left;
+}
+
+.geheim {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f4f2fa;
+  font-size: 16px;
+  color: #6b6480;
+}
+
+.geheim b {
+  font-size: 19px;
+  color: var(--inkt);
+}
+
+.geheim.gevonden {
+  background: #fff6db;
+}

@@ -1,32 +1,39 @@
-// Het hart van het spel: de wereld, de speler, de dieren, de camera en de obby.
+// Het hart van het spel: de wereld, de speler, de dieren, de camera, de obby
+// en de geheimen (easter eggs).
 
 import * as THREE from 'three';
 import { Avatar } from '../figuren/avatar';
 import { HOND_KLEUREN, PONY_KLEUREN, Pony, Puppy, vachtVan } from '../figuren/dieren';
 import { Geluid } from '../geluid/geluid';
+import { Muziek } from '../geluid/muziek';
 import { kiesWoorden, verwerkAntwoord } from '../leren/herhaalbakjes';
 import { tipVoor, voorleesTekst, zinMetGat } from '../leren/spelling';
-import { spreek } from '../leren/voorlezen';
+import { nederlandseStemmen, opSpreken, spreek, stelStemIn } from '../leren/voorlezen';
 import { WOORDEN, type Categorie, type Woordkaart } from '../leren/woorden';
 import { bewaarStand, type Spelstand } from '../opslag/opslag';
 import { Hud, veilig } from '../ui/hud';
-import { finishKaart, sluitScherm, tipKaart } from '../ui/schermen';
+import { finishKaart, geheimenScherm, instellingenScherm, sluitScherm, tipKaart, wachtwoordScherm } from '../ui/schermen';
 import { AANTAL_POORTEN, DeurenObby, type ObbyGebeurtenis, type Poort } from '../wereld/deurenObby';
 import { EILAND_RAND, STARTPUNT, WATER_HOOGTE, bouwEiland, type Eiland } from '../wereld/eiland';
+import { GEHEIMEN, Geheimen, WACHTWOORD, type GeheimGebeurtenis } from '../wereld/geheimen';
+import { bouwSeizoen, kerstmuts, kroontje, seizoenOp, type Seizoen, type SeizoenVersiering } from '../wereld/seizoen';
 import { Effecten } from '../wereld/versiering';
 import { Besturing } from './besturing';
 import { Fysica, type Lichaam } from './fysica';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
+const TRAMPOLINE_SNELHEID = 21;
 const ZWAARTEKRACHT = 28;
 const COYOTE_TIJD = 0.14; // je mag nét na de rand nog springen
 const SPRING_BUFFER = 0.16; // te vroeg getikt telt ook
+const DANS_NA = 12; // seconden stilstaan voordat Ninte gaat dansen
 const OBBY_OORSPRONG = new THREE.Vector3(29, 0, 7.5);
 const WACHTPLEK_PONY = new THREE.Vector3(25.5, 0, 4.5);
 const WACHTPLEK_PUPPY = new THREE.Vector3(26, 0, 10.5);
 const CATEGORIEEN: Categorie[] = ['langermaakwoord', 'ei-ij', 'au-ou'];
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
+const AANTAL_GOUDEN = 5;
 
 type Modus = 'titel' | 'spelen' | 'scherm';
 
@@ -36,6 +43,7 @@ export class Spel {
   readonly camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
   readonly fysica = new Fysica();
   readonly geluid = new Geluid();
+  readonly muziek = new Muziek(this.geluid);
   readonly hud = new Hud();
   readonly besturing: Besturing;
   readonly speler: Lichaam = {
@@ -47,15 +55,19 @@ export class Spel {
     grond: null,
   };
   modus: Modus = 'titel';
+  readonly seizoen: Seizoen | null = seizoenOp(new Date());
 
   private eiland: Eiland;
   readonly obby: DeurenObby;
+  readonly geheimen: Geheimen;
+  private versiering: SeizoenVersiering | null = null;
   private avatar = new Avatar();
   private pony: Pony | null = null;
   private puppy: Puppy | null = null;
   private effecten: Effecten;
   private zon: THREE.DirectionalLight;
   private klok = new THREE.Timer();
+  private straal = new THREE.Raycaster();
 
   private camYaw = 0;
   private camPitch = 0.38;
@@ -69,9 +81,15 @@ export class Spel {
   private wasOpGrond = true;
   private terugTimer = -1;
   private titelTijd = 0;
+  private tijd = 0;
   private obbyKlaar = false;
   private obbyUitgelegd = false;
   private ronde = { goedInEenKeer: 0, verdiend: 0 };
+  private stilTijd = 0;
+  private dansen = false;
+  private spoorTimer = 0;
+  private grondSporen: THREE.Vector3[] = [];
+  private grondTimer = 0;
 
   constructor(canvas: HTMLCanvasElement, readonly stand: Spelstand) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -99,11 +117,22 @@ export class Spel {
     this.eiland = bouwEiland(this.scene, this.fysica);
     this.obby = new DeurenObby(this.scene, this.fysica, OBBY_OORSPRONG);
     this.obby.startRonde(this.kiesRondeWoorden());
+    this.geheimen = new Geheimen(this.scene, this.fysica, this.obby.finishPunt);
+    this.geheimen.verberg(stand.goudenHoefijzers);
+    if (stand.geheimen.includes('schatkist')) this.geheimen.openKist(true);
     this.effecten = new Effecten(this.scene);
 
     this.scene.add(this.avatar.groep);
     this.avatar.groep.position.copy(STARTPUNT);
     this.avatar.groep.rotation.y = this.kijkHoek;
+    if (this.seizoen) {
+      this.versiering = bouwSeizoen(this.scene, this.seizoen);
+      const hoed = this.seizoen === 'winter' ? kerstmuts(1.1) : this.seizoen === 'koningsdag' ? kroontje(1) : null;
+      if (hoed) {
+        hoed.position.copy(this.avatar.hoofdAnker);
+        this.avatar.groep.add(hoed);
+      }
+    }
     this.maakDieren();
 
     this.besturing = new Besturing(
@@ -115,15 +144,10 @@ export class Spel {
     this.besturing.aan = false;
 
     this.geluid.aan = stand.geluidAan;
-    this.hud.zetGeluid(stand.geluidAan);
+    this.muziek.zetAan(stand.muziekAan);
+    opSpreken((bezig) => this.muziek.demp(bezig));
     this.hud.zetHoefijzers(stand.hoefijzers);
     this.hud.zichtbaar(false);
-    this.hud.geluidKnop.addEventListener('click', () => {
-      this.stand.geluidAan = !this.stand.geluidAan;
-      this.geluid.aan = this.stand.geluidAan;
-      this.hud.zetGeluid(this.stand.geluidAan);
-      bewaarStand(this.stand);
-    });
 
     window.addEventListener('resize', () => this.pasFormaatAan());
     this.pasFormaatAan();
@@ -134,6 +158,12 @@ export class Spel {
     this.renderer.setAnimationLoop((t) => this.frame(t));
   }
 
+  /** Na de eerste tik: geluid ontgrendelen en de muziek starten. */
+  startGeluid() {
+    this.geluid.ontgrendel();
+    this.muziek.speel('eiland');
+  }
+
   /** (Opnieuw) pony en puppy maken met de gekozen naam en kleur. */
   maakDieren() {
     for (const d of [this.pony, this.puppy]) if (d) this.scene.remove(d.groep);
@@ -142,11 +172,20 @@ export class Spel {
     this.puppy = puppy ? new Puppy(puppy.naam, vachtVan(HOND_KLEUREN, puppy.kleur)) : null;
     if (this.pony) {
       this.pony.groep.position.set(STARTPUNT.x + 2.0, 0, STARTPUNT.z + 0.4);
+      if (this.stand.geheimen.includes('eenhoorn')) this.pony.maakMagisch();
       this.scene.add(this.pony.groep);
     }
     if (this.puppy) {
       this.puppy.groep.position.set(STARTPUNT.x - 1.5, 0, STARTPUNT.z - 0.2);
       this.scene.add(this.puppy.groep);
+    }
+    if (this.seizoen === 'winter') {
+      for (const [dier, maat] of [[this.pony, 0.75], [this.puppy, 0.6]] as const) {
+        if (!dier) continue;
+        const muts = kerstmuts(maat);
+        muts.position.copy(dier.hoofdAnker);
+        dier.groep.add(muts);
+      }
     }
     this.eiland.stalBord.zetTekst(pony ? `Stal van ${pony.naam}` : 'Stal');
     this.eiland.hokBord.zetTekst(puppy ? puppy.naam : 'Hok');
@@ -185,6 +224,67 @@ export class Spel {
     this.besturing.aan = true;
   }
 
+  toonInstellingen() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.pauzeer();
+    const proef = () => spreek(`Hoi ${this.stand.speler}! Zo klink ik.`);
+    instellingenScherm({
+      geluidAan: this.stand.geluidAan,
+      muziekAan: this.stand.muziekAan,
+      stemmen: nederlandseStemmen().map((s) => ({ naam: s.name, label: `${s.name} · ${s.lang}` })),
+      stemNaam: this.stand.stemNaam,
+      tempo: this.stand.stemTempo,
+      opGeluid: (aan) => {
+        this.stand.geluidAan = aan;
+        this.geluid.aan = aan;
+        this.geluid.klik();
+        bewaarStand(this.stand);
+      },
+      opMuziek: (aan) => {
+        this.stand.muziekAan = aan;
+        this.muziek.zetAan(aan);
+        bewaarStand(this.stand);
+      },
+      opStem: (naam) => {
+        this.stand.stemNaam = naam;
+        stelStemIn(naam, this.stand.stemTempo);
+        bewaarStand(this.stand);
+        proef();
+      },
+      opTempo: (tempo) => {
+        this.stand.stemTempo = tempo;
+        stelStemIn(this.stand.stemNaam, tempo);
+        bewaarStand(this.stand);
+        proef();
+      },
+      opSluit: () => {
+        this.geluid.klik();
+        this.hervat();
+      },
+    });
+  }
+
+  toonGeheimen() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.pauzeer();
+    const gevonden = new Set(this.stand.geheimen);
+    const aantalGoud = this.stand.goudenHoefijzers.length;
+    geheimenScherm(
+      GEHEIMEN.map((g) => ({
+        naam: g.naam,
+        hint: g.hint,
+        gevonden: g.id === 'hoefijzers' ? aantalGoud >= AANTAL_GOUDEN : gevonden.has(g.id),
+        extra: g.id === 'hoefijzers' ? `${aantalGoud} van de ${AANTAL_GOUDEN} gevonden` : undefined,
+      })),
+      () => {
+        this.geluid.klik();
+        this.hervat();
+      },
+    );
+  }
+
   private pasFormaatAan() {
     const b = window.innerWidth;
     const h = window.innerHeight;
@@ -198,18 +298,28 @@ export class Spel {
   private frame(tijd: number) {
     this.klok.update(tijd);
     const dt = Math.min(this.klok.getDelta(), 1 / 20);
+    this.tijd += dt;
     this.besturing.update();
 
     if (this.modus === 'titel') this.updateTitelCamera(dt);
     if (this.modus === 'spelen') {
       this.updateSpeler(dt);
       this.verwerk(this.obby.update(dt, this.speler));
+      this.verwerkGeheimen(this.geheimen.update(dt, this.speler));
+      for (const tik of this.besturing.neemTikken()) this.tik(tik.x, tik.y);
     } else {
-      this.obby.update(dt, { ...this.speler, pos: { x: -999, y: -999, z: -999 } });
+      const weg = { ...this.speler, pos: { x: -999, y: -999, z: -999 } };
+      this.obby.update(dt, weg);
+      this.geheimen.update(dt, weg);
     }
-    if (this.modus !== 'titel') this.updateCamera(dt);
+    if (this.modus !== 'titel') {
+      this.updateCamera(dt);
+      const nummer = this.geheimen.opWolken(this.speler) ? 'geheim' : this.obby.bevat(this.speler.pos.x) ? 'obby' : 'eiland';
+      this.muziek.speel(nummer);
+    }
     this.updateDieren(dt);
     this.effecten.update(dt);
+    this.versiering?.update(dt, this.camera.position, this.tijd);
     for (const w of this.eiland.wolken) {
       w.position.x += dt * 1.2;
       if (w.position.x > 130) w.position.x = -130;
@@ -243,7 +353,8 @@ export class Spel {
     s.snelheid.x += (rx * LOOPSNELHEID - s.snelheid.x) * k;
     s.snelheid.z += (rz * LOOPSNELHEID - s.snelheid.z) * k;
 
-    if (this.besturing.wilSpringen()) this.springBuffer = SPRING_BUFFER;
+    const wilSpringen = this.besturing.wilSpringen();
+    if (wilSpringen) this.springBuffer = SPRING_BUFFER;
     this.coyote = s.opGrond ? COYOTE_TIJD : this.coyote - dt;
     if (this.springBuffer > 0 && this.coyote > 0 && this.terugTimer < 0) {
       s.snelheid.y = SPRONGSNELHEID;
@@ -263,12 +374,39 @@ export class Spel {
       verschil = Math.atan2(Math.sin(verschil), Math.cos(verschil));
       this.kijkHoek += verschil * Math.min(1, dt * 14);
     }
-    this.avatar.groep.position.set(s.pos.x, s.pos.y, s.pos.z);
-    this.avatar.groep.rotation.y = this.kijkHoek;
-    const tempo = Math.min(1, Math.hypot(s.snelheid.x, s.snelheid.z) / LOOPSNELHEID);
-    this.avatar.animeer(dt, tempo, !this.wasOpGrond);
 
-    // In het water gevallen? Plons, en terug naar het laatste checkpoint.
+    // Een tijdje niks doen? Dan gaat Ninte dansen (een geheimpje).
+    const stil = Math.hypot(b.x, b.y) === 0 && !wilSpringen && s.opGrond && !this.obby.bevat(s.pos.x);
+    this.stilTijd = stil ? this.stilTijd + dt : 0;
+    const dansen = this.stilTijd > DANS_NA;
+    if (dansen && !this.dansen) this.vindGeheim('dansje', 'Dansfeest!', `${this.stand.speler} gaat dansen!`);
+    this.dansen = dansen;
+
+    const tempo = Math.min(1, Math.hypot(s.snelheid.x, s.snelheid.z) / LOOPSNELHEID);
+    const wip = this.avatar.animeer(dt, tempo, !this.wasOpGrond, dansen);
+    this.avatar.groep.position.set(s.pos.x, s.pos.y + wip, s.pos.z);
+    this.avatar.groep.rotation.y = this.kijkHoek + (dansen ? Math.sin(this.tijd * 3.5) * 0.6 : 0);
+
+    // Regenboogspoor (beloning uit de schatkist)
+    if (this.stand.geheimen.includes('schatkist') && tempo > 0.2 && s.opGrond) {
+      this.spoorTimer -= dt;
+      if (this.spoorTimer <= 0) {
+        this.spoorTimer = 0.045;
+        this.effecten.spoor(new THREE.Vector3(s.pos.x, s.pos.y + 0.15, s.pos.z));
+      }
+    }
+
+    // Plekken onthouden waar je stond, om na een plons daar terug te komen.
+    if (s.opGrond && !this.obby.bevat(s.pos.x)) {
+      this.grondTimer -= dt;
+      if (this.grondTimer <= 0) {
+        this.grondTimer = 0.25;
+        this.grondSporen.push(new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z));
+        if (this.grondSporen.length > 6) this.grondSporen.shift();
+      }
+    }
+
+    // In het water gevallen? Plons, en terug naar een veilige plek.
     if (this.terugTimer < 0 && s.pos.y < WATER_HOOGTE - 0.4) {
       this.terugTimer = 0.8;
       this.effecten.plons(new THREE.Vector3(s.pos.x, WATER_HOOGTE, s.pos.z));
@@ -278,8 +416,13 @@ export class Spel {
     if (this.terugTimer >= 0) {
       this.terugTimer -= dt;
       if (this.terugTimer < 0) {
-        if (this.obby.bevat(s.pos.x)) this.zetSpeler(this.obby.checkpoint, OBBY_RICHTING);
-        else this.zetSpeler(STARTPUNT, Math.PI);
+        if (this.obby.bevat(s.pos.x)) {
+          this.zetSpeler(this.obby.checkpoint, OBBY_RICHTING);
+        } else {
+          const veilig = this.grondSporen[Math.max(0, this.grondSporen.length - 4)] ?? STARTPUNT;
+          this.grondSporen = [];
+          this.zetSpeler(veilig, Math.atan2(-veilig.x, -veilig.z)); // kijk naar het midden van het eiland
+        }
       }
     }
   }
@@ -327,7 +470,7 @@ export class Spel {
       z: Math.cos(this.camYaw) * cp,
     };
     // Zit er een muur tussen? Dan komt de camera dichterbij (zoals in Roblox).
-    const vrij = Math.max(1.5, this.fysica.straal(c, richting, this.camAfstand) - 0.35);
+    const vrij = Math.max(0.3, this.fysica.straal(c, richting, this.camAfstand) - 0.3);
     this.camEchteAfstand = vrij < this.camEchteAfstand ? vrij : this.camEchteAfstand + (vrij - this.camEchteAfstand) * Math.min(1, dt * 4);
     const a = this.camEchteAfstand;
     this.camera.position.set(c.x + richting.x * a, c.y + richting.y * a, c.z + richting.z * a);
@@ -353,14 +496,126 @@ export class Spel {
       const doel = inObby
         ? WACHTPLEK_PONY.clone()
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, -2.0).addScaledVector(voor, -0.4));
-      this.pony.update(dt, doel);
+      this.pony.update(dt, doel, this.dansen);
     }
     if (this.puppy) {
       const doel = inObby
         ? WACHTPLEK_PUPPY.clone()
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, 1.5).addScaledVector(voor, 0.2));
-      this.puppy.update(dt, doel);
+      this.puppy.update(dt, doel, this.dansen);
     }
+  }
+
+  /** Een tikje op het scherm: raak je een dier, dan aai je het. */
+  private tik(x: number, y: number) {
+    const ndc = new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    this.straal.setFromCamera(ndc, this.camera);
+    this.straal.camera = this.camera;
+    const kandidaten = [this.pony, this.puppy].filter((d) => d !== null);
+    let geraakt: Pony | Puppy | null = null;
+    let dichtst = Infinity;
+    for (const dier of kandidaten) {
+      const raak = this.straal.intersectObject(dier.groep, true)[0];
+      if (raak && raak.distance < dichtst) {
+        dichtst = raak.distance;
+        geraakt = dier;
+      }
+    }
+    if (!geraakt) return;
+    const kop = geraakt.groep.localToWorld(geraakt.hoofdAnker.clone());
+    this.effecten.hartjes(kop.add(new THREE.Vector3(0, 0.4, 0)));
+    const truc = geraakt.aai();
+    if (geraakt instanceof Pony) {
+      this.geluid.klik();
+      if (truc) {
+        geraakt.steiger();
+        this.geluid.hinnik();
+        this.vindGeheim('steigeren', 'Steigeren!', `${this.stand.pony?.naam ?? 'Je pony'} gaat op zijn achterbenen staan!`);
+      }
+    } else {
+      this.geluid.blaf();
+      if (truc) {
+        geraakt.zoomies();
+        this.vindGeheim('zoomies', 'Zoomies!', `${this.stand.puppy?.naam ?? 'Je puppy'} krijgt de zoomies!`);
+      }
+    }
+  }
+
+  /** Een geheim gevonden: melding, geluidje en in het geheimenboek. */
+  private vindGeheim(id: string, titel: string, tekst: string) {
+    if (this.stand.geheimen.includes(id)) return;
+    this.stand.geheimen.push(id);
+    bewaarStand(this.stand);
+    this.geluid.magie();
+    const p = this.speler.pos;
+    this.effecten.goudregen(new THREE.Vector3(p.x, p.y + 2.5, p.z));
+    this.hud.toonBanner(`⭐ <b>Geheim gevonden: ${veilig(titel)}</b><br>${veilig(tekst)}`, () => spreek(tekst), { goed: true, duur: 5000 });
+    spreek(tekst);
+  }
+
+  private verwerkGeheimen(gebeurtenissen: GeheimGebeurtenis[]) {
+    for (const g of gebeurtenissen) {
+      switch (g.soort) {
+        case 'trampoline':
+          this.speler.snelheid.y = TRAMPOLINE_SNELHEID;
+          this.speler.opGrond = false;
+          this.coyote = 0; // anders maakt een gewone sprong de superstuiter ongedaan
+          this.geluid.boing();
+          this.vindGeheim('trampoline', 'Boing!', 'Wat een hoge sprong! Kun je nu op het dak van de stal komen?');
+          break;
+        case 'eilandje':
+          this.vindGeheim('eilandje', 'Palmeilandje', 'Je hebt het palmeilandje gevonden!');
+          break;
+        case 'wolkeneiland':
+          this.vindGeheim('wolkeneiland', 'Wolkeneiland', 'Wauw, een eiland in de wolken! Met een regenboog!');
+          break;
+        case 'hoefijzer': {
+          if (!this.stand.goudenHoefijzers.includes(g.id)) this.stand.goudenHoefijzers.push(g.id);
+          const n = this.stand.goudenHoefijzers.length;
+          this.effecten.goudregen(g.pos);
+          this.geluid.magie();
+          this.geefHoefijzers(5);
+          if (n >= AANTAL_GOUDEN) {
+            this.pony?.maakMagisch();
+            const naam = this.stand.pony?.naam ?? 'Je pony';
+            this.vindGeheim('eenhoorn', 'Magische pony', `Alle gouden hoefijzers! ${naam} is nu een magische eenhoorn!`);
+          } else {
+            const tekst = `Een gouden hoefijzer! Je hebt er ${n} van de ${AANTAL_GOUDEN}.`;
+            this.hud.toonBanner(`✨ ${tekst}`, () => spreek(tekst), { goed: true, duur: 4000 });
+            spreek(tekst);
+          }
+          bewaarStand(this.stand);
+          break;
+        }
+        case 'kist':
+          this.openSlot();
+          break;
+      }
+    }
+  }
+
+  private openSlot() {
+    this.pauzeer();
+    spreek('Een schatkist! Weet jij het geheime wachtwoord?');
+    wachtwoordScherm(
+      (tekst) => {
+        if (tekst.trim().toLowerCase() !== WACHTWOORD) {
+          this.geluid.fout();
+          return false;
+        }
+        this.hervat();
+        this.geheimen.openKist();
+        this.geluid.kist();
+        this.effecten.confetti(new THREE.Vector3(-23.3, 1.5, -3.7));
+        this.geefHoefijzers(20);
+        this.vindGeheim('schatkist', 'Schatkist', 'De kist is open! Je krijgt een regenboogspoor. Loop maar eens rond!');
+        return true;
+      },
+      () => {
+        this.geluid.klik();
+        this.hervat();
+      },
+    );
   }
 
   private geefHoefijzers(n: number) {
@@ -460,10 +715,18 @@ export class Spel {
                 this.zetSpeler(STARTPUNT, Math.PI);
                 this.hervat();
               },
+              () => {
+                this.geluid.klik();
+                this.hervat();
+              },
             );
           }, 1400);
           break;
         }
+        case 'terug':
+          this.geluid.magie();
+          this.zetSpeler(STARTPUNT, Math.PI);
+          break;
       }
     }
   }

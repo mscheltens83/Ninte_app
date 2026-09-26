@@ -114,6 +114,8 @@ export function uitlegScherm(opSluit: () => void, computer: boolean) {
         <div><b class="icoon">👀</b>${kijken}</div>
         <div><b class="icoon">🚪</b>Volg het bordje naar de Deuren-obby. Loop door de deur met de goede spelling!</div>
         <div><b class="icoon">🔊</b>Tik op het luidsprekertje om de zin te laten voorlezen.</div>
+        <div><b class="icoon">❤️</b>Tik op je pony of puppy om ze te aaien.</div>
+        <div><b class="icoon">⭐</b>Er zijn geheimen verstopt op het eiland. Kun jij ze allemaal vinden?</div>
       </div>
       <button class="knop" data-oke>Oké!</button>
     </div>`,
@@ -149,6 +151,7 @@ export function finishKaart(
   verdiend: number,
   opNogEens: () => void,
   opEiland: () => void,
+  opBlijf: () => void,
 ) {
   const sterren = goedInEenKeer === totaal ? 3 : goedInEenKeer >= totaal - 2 ? 2 : 1;
   const tekst =
@@ -163,8 +166,148 @@ export function finishKaart(
       <p><b>+${verdiend} hoefijzers</b></p>
       <button class="knop blauw" data-eiland>Terug naar het eiland</button>
       <button class="knop" data-nogeens>Nog een keer</button>
+      <p><button class="link-knop" data-blijf>Nog even hier rondkijken</button></p>
     </div>`,
   );
   knop(s, '[data-nogeens]', opNogEens);
   knop(s, '[data-eiland]', opEiland);
+  knop(s, '[data-blijf]', opBlijf);
+}
+
+export interface StemOptie {
+  naam: string;
+  label: string;
+}
+
+export interface InstellingenOpties {
+  geluidAan: boolean;
+  muziekAan: boolean;
+  stemmen: StemOptie[];
+  stemNaam: string | null;
+  tempo: number;
+  opGeluid(aan: boolean): void;
+  opMuziek(aan: boolean): void;
+  opStem(naam: string | null): void;
+  opTempo(tempo: number): void;
+  opSluit(): void;
+}
+
+const TEMPO_KEUZES: [string, number][] = [
+  ['Langzaam', 0.75],
+  ['Normaal', 0.9],
+  ['Snel', 1.05],
+];
+
+export function instellingenScherm(o: InstellingenOpties) {
+  const schakelaar = (id: string, label: string, aan: boolean) =>
+    `<div class="rij"><span>${label}</span><button class="schakelaar${aan ? ' aan' : ''}" data-schakel="${id}" role="switch" aria-checked="${aan}">${aan ? 'Aan' : 'Uit'}</button></div>`;
+  const stemmen = o.stemmen.length
+    ? [{ naam: '', label: 'Automatisch (de mooiste)' }, ...o.stemmen]
+        .map(
+          (st) =>
+            `<button class="stem${(o.stemNaam ?? '') === st.naam ? ' gekozen' : ''}" data-stem="${veilig(st.naam)}">${veilig(st.label)}</button>`,
+        )
+        .join('')
+    : '<p class="klein">Op dit apparaat is geen Nederlandse stem gevonden.</p>';
+  const s = toon(
+    `<div class="kaart instellingen">
+      <h2>Instellingen</h2>
+      ${schakelaar('geluid', 'Geluidjes', o.geluidAan)}
+      ${schakelaar('muziek', 'Muziek', o.muziekAan)}
+      <h3>Voorleesstem</h3>
+      <div class="stemmen">${stemmen}</div>
+      <div class="rij"><span>Tempo</span><div class="tempo">${TEMPO_KEUZES.map(
+        ([naam, t]) => `<button class="tempo-knop${Math.abs(o.tempo - t) < 0.01 ? ' gekozen' : ''}" data-tempo="${t}">${naam}</button>`,
+      ).join('')}</div></div>
+      <p class="tip">Klinkt de stem als een robot? Download op de iPad een mooiere stem:
+        <b>Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands</b>.
+        Kies een stem met <b>(Verbeterd)</b> of <b>(Premium)</b> achter de naam en start het spel opnieuw.</p>
+      <p class="klein">Muziek: "Carefree", "Monkeys Spinning Monkeys" en "Fluffing a Duck" van Kevin MacLeod (incompetech.com), licentie CC BY 4.0.</p>
+      <button class="knop" data-klaar>Klaar</button>
+    </div>`,
+  );
+  s.querySelectorAll<HTMLButtonElement>('[data-schakel]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const aan = !b.classList.contains('aan');
+      b.classList.toggle('aan', aan);
+      b.textContent = aan ? 'Aan' : 'Uit';
+      b.setAttribute('aria-checked', String(aan));
+      if (b.dataset.schakel === 'geluid') o.opGeluid(aan);
+      else o.opMuziek(aan);
+    }),
+  );
+  s.querySelectorAll<HTMLButtonElement>('[data-stem]').forEach((b) =>
+    b.addEventListener('click', () => {
+      s.querySelectorAll('[data-stem]').forEach((x) => x.classList.toggle('gekozen', x === b));
+      o.opStem(b.dataset.stem || null);
+    }),
+  );
+  s.querySelectorAll<HTMLButtonElement>('[data-tempo]').forEach((b) =>
+    b.addEventListener('click', () => {
+      s.querySelectorAll('[data-tempo]').forEach((x) => x.classList.toggle('gekozen', x === b));
+      o.opTempo(Number(b.dataset.tempo));
+    }),
+  );
+  knop(s, '[data-klaar]', o.opSluit);
+}
+
+export interface GeheimRegel {
+  naam: string;
+  hint: string;
+  gevonden: boolean;
+  extra?: string;
+}
+
+export function geheimenScherm(regels: GeheimRegel[], opSluit: () => void) {
+  const gevonden = regels.filter((r) => r.gevonden).length;
+  const s = toon(
+    `<div class="kaart">
+      <h2>Geheimen</h2>
+      <p><b>${gevonden} van de ${regels.length}</b> gevonden</p>
+      <div class="geheimen">
+        ${regels
+          .map((r) =>
+            r.gevonden
+              ? `<div class="geheim gevonden"><b>⭐ ${veilig(r.naam)}</b>${r.extra ? `<span>${veilig(r.extra)}</span>` : ''}</div>`
+              : `<div class="geheim"><b>❓ ???</b><span>${veilig(r.hint)}</span>${r.extra ? `<span>${veilig(r.extra)}</span>` : ''}</div>`,
+          )
+          .join('')}
+      </div>
+      <button class="knop" data-klaar>Verder zoeken!</button>
+    </div>`,
+  );
+  knop(s, '[data-klaar]', opSluit);
+}
+
+/** De schatkist met een slot: het wachtwoord moet goed gespeld zijn. */
+export function wachtwoordScherm(opProbeer: (tekst: string) => boolean, opLater: () => void) {
+  const s = toon(
+    `<div class="kaart">
+      <h2>Een schatkist!</h2>
+      <p>Er zit een slot op. Typ het geheime wachtwoord:</p>
+      <input class="naamveld" type="text" maxlength="20" placeholder="wachtwoord"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
+      <p class="hint"></p>
+      <button class="knop wit" data-later>Later</button>
+      <button class="knop" data-open>Open de kist</button>
+    </div>`,
+  );
+  const veld = s.querySelector<HTMLInputElement>('.naamveld')!;
+  const hint = s.querySelector<HTMLParagraphElement>('.hint')!;
+  const probeer = () => {
+    if (!veld.value.trim()) {
+      hint.textContent = 'Typ eerst het wachtwoord.';
+      return;
+    }
+    if (!opProbeer(veld.value)) {
+      hint.textContent = 'Bijna! Kijk nog eens goed hoe het op het briefje staat. Let op elke letter.';
+      veld.select();
+    }
+  };
+  veld.addEventListener('input', () => (hint.textContent = ''));
+  veld.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') probeer();
+  });
+  knop(s, '[data-open]', probeer);
+  knop(s, '[data-later]', opLater);
 }
