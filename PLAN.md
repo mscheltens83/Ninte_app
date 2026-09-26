@@ -1,6 +1,9 @@
-# Plan: een Roblox-achtig leerspel over paarden, honden en spelling
+# Plan: Nintes Wereld
 
-**Voor wie:** een meisje van 9 jaar, groep 6, dol op Roblox, paarden, honden en schrijven.
+*Een Roblox-achtig leerspel over paarden, honden en spelling.*
+
+**Voor wie:** Ninte, 9 jaar, groep 6, dol op Roblox, paarden, honden en schrijven.
+**Speelt op:** iPad. **Spellingmethode op school:** Staal. **Samen spelen:** niet nodig.
 **Doel:** een spel dat voelt als Roblox, waarin ze vanzelf beter leert spellen, zonder dat haar schrijfplezier verdwijnt.
 
 ---
@@ -9,7 +12,7 @@
 
 Een vrolijk blokjeseiland in Roblox-stijl. Ze zorgt er voor haar eigen paarden en honden, rijdt door het bos, doet obby's (hindernisbanen) en voert opdrachten uit voor de dorpsbewoners. Met **schrijven en spellen** verdient ze **hoefijzers**. Daarmee koopt ze nieuwe dieren, spullen voor de stal en kleding voor haar avatar.
 
-Werktitel: *Hoefjes & Pootjes*. Het mooiste is als zij zelf de naam kiest.
+Het spel heet **Nintes Wereld**.
 
 ## 2. Uitgangspunten
 
@@ -24,14 +27,28 @@ Werktitel: *Hoefjes & Pootjes*. Het mooiste is als zij zelf de naam kiest.
 
 | | **Eigen web-game (aanbevolen)** | Bouwen in Roblox Studio |
 |---|---|---|
-| Speelt op | Laptop, tablet of Chromebook (browser, als app te installeren) | Roblox-app, account nodig |
+| Speelt op | iPad (in Safari, als app op het beginscherm) | Roblox-app, account nodig |
 | Nederlandse voorleesstem voor dictee | Ja, ingebouwd in de browser | Beperkt |
 | Vrij schrijven en verhalen bewaren | Helemaal vrij | Omslachtig door de tekstfilterregels van Roblox |
 | Veiligheid | Geen chat, geen vreemden, geen Robux | Roblox-omgeving |
 | Bouwen en testen | Snel, alles in deze repository | Roblox Studio (Windows/Mac) nodig |
-| Samen spelen met vriendinnen | Nee (eerst niet) | Ja |
 
-**Conclusie:** een web-game met de *look & feel* van Roblox: blokjespoppetjes, obby's, huisdieren, munten en een winkel. Wil ze later samen met vriendinnen spelen, dan kunnen we een Roblox-versie overwegen (fase 4).
+**Conclusie:** een web-game met de *look & feel* van Roblox: blokjespoppetjes, obby's, huisdieren, munten en een winkel. Samen spelen is niet nodig, dus een Roblox-versie valt af.
+
+## 3b. Spelmodus: echt voor een kind van 9
+
+Ninte kent Roblox al. Het spel moet daarom niet kinderachtig voelen, maar ook niet te moeilijk of te spannend zijn.
+
+| Wat | Hoe |
+|---|---|
+| **Besturing zoals Roblox op de iPad** | Joystick links (verschijnt waar je duim komt), springknop rechts, camera draaien door te vegen. Ze hoeft niets nieuws te leren. |
+| **Geen game-over** | Er zijn geen levens en er is geen tijdsdruk. Val je, dan plons je zachtjes en begin je weer bij het laatste checkpoint. Er gaat nooit iets verloren. |
+| **Sprongen die te doen zijn** | De gaten zijn klein en de platforms breed. Het moet voelen als "ik kan dit", niet als een frustrerende obby. |
+| **Toon die past bij 9 jaar** | Vrolijk en een beetje grappig, maar geen babytaal. *"Bijna! Het is paard met een d."* in plaats van *"Oei schatje, dat is fout!"* |
+| **Goed te lezen** | Grote, ronde letters, korte zinnen, en alles kan ze laten voorlezen met het luidsprekertje. |
+| **Spelling op groep 6-niveau** | De categorieën en trucjes van Staal, met woorden die bij groep 6 passen. Geen woorden die ze nog niet kan kennen. |
+| **Zelf kiezen** | Ze bedenkt en typt zelf de namen van haar dieren en kiest hun kleur. |
+| **Veilig en rustig** | Niets engs, geen geweld, geen chat, geen reclame, geen aankopen. Na ongeveer 20 minuten gaan de dieren slapen. |
 
 ## 4. De spelwereld
 
@@ -68,7 +85,7 @@ Ze geeft alle dieren zelf een naam en kiest hun kleur. Haar dieren lopen achter 
 
 ## 6. Welke spelling oefent ze? (groep 6)
 
-> **Eerst doen:** vraag de juf of meester welke spellingmethode de school gebruikt (bijvoorbeeld *Staal* of *Taal actief*) en welke categorieën nu aan de beurt zijn. Dan gebruikt het spel precies dezelfde namen en trucjes als in de klas, zoals "langermaakwoord" of "klankgroepwoord".
+> **De school gebruikt Staal.** Het spel gebruikt daarom de namen en trucjes van Staal, zoals *langermaakwoord*, *klankgroepwoord*, *verkleinwoord*, *komma-s-woord* en *weetwoord* (korte ei / lange ij). Tip: vraag de juf of meester welke categorieën dit blok aan de beurt zijn, of kijk in de weekbrief. Dan kun je die in de ouder-modus aanzetten.
 
 | Onderwerp | Trucje | Voorbeelden uit het spel |
 |---|---|---|
@@ -100,7 +117,7 @@ Het spel heeft ingebouwde woordlijsten met paarden- en hondenwoorden. Daarnaast 
 - **Foutanalyse.** Het spel vergelijkt haar antwoord met het goede woord en herkent het soort fout: d en t verwisseld, ei en ij verwisseld, een medeklinker te weinig, enzovoort. Daarop volgt een gericht trucje, en de fout telt mee in de statistiek per categorie.
 - **Past zich aan.** Uit haar zwakste categorieën kiest het spel vaker woorden, maar het mengt er ook makkelijke woorden doorheen. Het doel is dat ze ongeveer 75–80% goed heeft: uitdagend, maar ze blijft succes ervaren.
 - **Spellingcontrole bij vrij schrijven.** Het spel gebruikt een offline Nederlands woordenboek (OpenTaal, via de bibliotheken `nspell` en `dictionary-nl`), aangevuld met de namen van haar dieren. Er gaat niets naar internet.
-- **Autocorrectie uit!** In alle tekstvakken staan `autocorrect`, `autocapitalize` en `spellcheck` uit. Zet op een tablet ook *voorspellende tekst* uit in de toetsenbordinstellingen. Anders verbetert het apparaat haar spelling en leert ze niets.
+- **Autocorrectie uit!** In alle tekstvakken staan `autocorrect`, `autocapitalize` en `spellcheck` uit. Zet op de iPad ook *Autocorrectie* en *Voorspellend* uit (Instellingen → Algemeen → Toetsenbord). Anders verbetert de iPad haar spelling en leert ze niets.
 - **Voorlezen.** Het spel gebruikt de ingebouwde Nederlandse stem van de browser (Web Speech API, `nl-NL`). Als er geen goede stem is, kan de ouder de woorden zelf inspreken met de microfoon (opnamefunctie).
 
 ## 8. Ouder-modus
@@ -126,11 +143,11 @@ Het spel heeft ingebouwde woordlijsten met paarden- en hondenwoorden. Daarnaast 
 | 3D | Three.js | Draait in elke browser. Figuren en dieren bouwen we in code uit blokjes, echt Roblox-stijl, zonder 3D-modellen te hoeven maken |
 | Beweging | Eigen eenvoudige botsingen (lopen, springen, platforms) | Genoeg voor een obby; later eventueel Rapier-physics |
 | Menu's en schrijfvelden | HTML/CSS bovenop de 3D-wereld | Goed leesbaar, fijn om in te typen |
-| Bediening | Toetsenbord (WASD/pijltjes + spatie) **en** touch (joystick + springknop) | Werkt op laptop én tablet |
-| Opslaan | IndexedDB op het apparaat + knop voor back-up/herstel | Geen account nodig, privacy |
+| Bediening | Touch zoals Roblox op de iPad (joystick + springknop + vegen), plus toetsenbord (WASD/pijltjes + spatie) om op de computer te testen | Voelt vertrouwd |
+| Opslaan | Op de iPad zelf (localStorage) + later een knop voor back-up/herstel | Geen account nodig, privacy |
 | App | PWA (op het beginscherm te zetten, werkt offline) | Voelt als een echte app. Op een iPad is dit ook nodig om te voorkomen dat Safari de voortgang wist |
 | Testen | Vitest voor de leerlogica (herhaalbakjes, foutanalyse) | Zorgt dat het leren betrouwbaar werkt |
-| Online zetten | Gratis statische hosting (bijv. GitHub Pages of Netlify) | Geen server nodig |
+| Online zetten | Gratis statische hosting die met een privé-repository werkt (bijv. Netlify of Cloudflare Pages) | Geen server nodig; GitHub Pages werkt voor privé-repositories alleen met een betaald account |
 
 **Voorgestelde mappenstructuur:**
 
@@ -151,17 +168,19 @@ tests/
 ## 11. Stappenplan
 
 ### Fase 0: samen ontwerpen (1 avond)
-- Laat háár meedenken. Hoe heet het eiland? Hoe heten haar eerste paard en hond, en welke kleur hebben ze? Laat haar een tekening van het eiland maken.
-- Vraag op school welke spellingmethode en categorieën nu aan de beurt zijn.
-- Kies op welk apparaat ze gaat spelen.
+- ✅ Naam: **Nintes Wereld**. ✅ Apparaat: **iPad**. ✅ Methode: **Staal**.
+- Laat haar een tekening van het eiland maken. Haar eerste pony en puppy geeft ze in het spel zelf een naam.
+- Vraag op school welke Staal-categorieën dit blok aan de beurt zijn.
 
-### Fase 1: speelbare basis
-- 3D-eiland met een avatar die kan lopen en springen (toetsenbord + touch).
-- Stal met het eerste paard en de eerste puppy, die achter haar aan lopen.
-- **Deuren-obby** met d/t- en ei/ij-woorden.
-- Hoefijzers verdienen, en de voortgang wordt opgeslagen.
-- Nederlandse voorleesstem.
-- ✅ *Klaar als:* zij het uit zichzelf wil spelen en het "een echt spel" vindt.
+### Fase 1: speelbare basis ✅ gebouwd
+- ✅ 3D-eiland met een avatar die kan lopen en springen (touch zoals Roblox op de iPad).
+- ✅ Stal, wei en hondenhok. Haar eigen pony en puppy (zelf naam typen en kleur kiezen) lopen naast haar.
+- ✅ **Deuren-obby** met 6 poorten. De woorden komen uit drie Staal-categorieën: langermaakwoord (d/t), weetwoord ei/ij en weetwoord au/ou.
+- ✅ Hoefijzers verdienen, en de voortgang wordt op de iPad opgeslagen.
+- ✅ Herhaalbakjes: woorden die fout gaan, komen vaker terug.
+- ✅ Nederlandse voorleesstem.
+- ✅ Werkt als app op het beginscherm van de iPad, ook offline.
+- *Klaar als:* zij het uit zichzelf wil spelen en het "een echt spel" vindt. **Nu testen met Ninte!**
 
 ### Fase 2: schrijven en dictee
 - **Dictee-springparcours** (paard rijden + woorden typen).
@@ -181,7 +200,6 @@ tests/
 - Instellingen voor speeltijd.
 - *Optioneel:* module werkwoordspelling zodra de school daaraan begint.
 - *Optioneel:* een AI-schrijfcoach die meeleest en tips geeft over haar verhaal. Daarvoor is een kleine server nodig, en het gebeurt alleen als jij als ouder dat wilt.
-- *Optioneel:* een echte Roblox-versie (via Rojo en Roblox Studio) om samen met vriendinnen te spelen.
 
 Na elke fase: **samen testen** en vragen wat leuk is, wat saai is en wat te moeilijk is. Daarna bijsturen.
 
@@ -192,9 +210,11 @@ Na elke fase: **samen testen** en vragen wat leuk is, wat saai is en wat te moei
 - Er staan minder foutjes per 100 woorden in haar verhalen, en dat is over de weken te volgen.
 - De dictees en toetsen op school.
 
-## 13. Open vragen
+## 13. Beantwoorde vragen
 
-1. **Op welk apparaat speelt ze?** Een laptop met toetsenbord, een iPad of tablet, of een Chromebook? Dat bepaalt de besturing en het typen.
-2. **Welke spellingmethode gebruikt de school**, en welke categorieën zijn nu aan de beurt?
-3. **Hoe gaat het spel heten?** Laat haar kiezen!
-4. **Wil ze later met vriendinnen samen spelen?** Dan wordt een Roblox-versie interessanter.
+| Vraag | Antwoord |
+|---|---|
+| Op welk apparaat speelt ze? | iPad |
+| Welke spellingmethode gebruikt de school? | Staal |
+| Hoe heet het spel? | Nintes Wereld |
+| Samen spelen met vriendinnen? | Niet nodig |

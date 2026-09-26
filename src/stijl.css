@@ -1,0 +1,529 @@
+:root {
+  --inkt: #2b2340;
+  --paars: #7b4dff;
+  --paars-donker: #5a2fd6;
+  --groen: #35c46a;
+  --groen-donker: #22994f;
+  --blauw: #3aa3e3;
+  --blauw-donker: #2179b3;
+  --roze: #ff6f91;
+  --geel: #ffcf33;
+  --paneel: #ffffff;
+  --lettertype: ui-rounded, 'Arial Rounded MT Bold', 'Nunito', system-ui, -apple-system, sans-serif;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #9ed8ff;
+  color: var(--inkt);
+  font-family: var(--lettertype);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+#spel {
+  position: fixed;
+  inset: 0;
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#vlak {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ---------- HUD ---------- */
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+}
+
+#hud.verborgen > *:not(#melding) {
+  visibility: hidden;
+}
+
+.paneel {
+  background: var(--paneel);
+  border-radius: 18px;
+  box-shadow: 0 6px 0 rgba(43, 35, 64, 0.18), 0 10px 24px rgba(43, 35, 64, 0.18);
+}
+
+#hoefijzers {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px 8px 12px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+#hoefijzers svg {
+  width: 36px;
+  height: 36px;
+}
+
+#hoefijzers.plus {
+  animation: plop 0.45s ease;
+}
+
+@keyframes plop {
+  40% {
+    transform: scale(1.18);
+  }
+}
+
+#knoppen-rechts {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.ronde-knop {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--paneel);
+  color: var(--inkt);
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgba(43, 35, 64, 0.2);
+  display: grid;
+  place-items: center;
+}
+
+.ronde-knop:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 rgba(43, 35, 64, 0.2);
+}
+
+.ronde-knop.klein {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  flex: none;
+}
+
+#banner {
+  position: absolute;
+  top: calc(max(14px, env(safe-area-inset-top)) + 72px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px 12px 22px;
+  pointer-events: auto;
+  animation: invliegen 0.3s ease;
+}
+
+#banner p {
+  margin: 0;
+  flex: 1;
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+#banner .gat {
+  display: inline-block;
+  width: 3.2em;
+  margin: 0 0.15em;
+  border-bottom: 4px solid var(--paars);
+  transform: translateY(-0.15em);
+}
+
+#banner.goed {
+  background: #e5f9ec;
+}
+
+@keyframes invliegen {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+}
+
+#melding {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(34px, 6vw, 56px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 rgba(43, 35, 64, 0.35), 0 0 18px rgba(43, 35, 64, 0.25);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+#melding.zichtbaar {
+  animation: melding 1.4s ease forwards;
+}
+
+@keyframes melding {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80%) scale(1);
+  }
+}
+
+/* Joystick (verschijnt waar de duim komt, zoals in Roblox) */
+#joystick-basis {
+  position: absolute;
+  left: calc(max(14px, env(safe-area-inset-left)) + 90px);
+  top: calc(100% - max(14px, env(safe-area-inset-bottom)) - 110px);
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+#joystick-basis.actief {
+  opacity: 1;
+}
+
+#joystick-knop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 3px 10px rgba(43, 35, 64, 0.25);
+}
+
+#springknop {
+  position: absolute;
+  right: calc(max(14px, env(safe-area-inset-right)) + 24px);
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 24px);
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.8);
+  background: rgba(43, 35, 64, 0.35);
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+
+#springknop svg {
+  width: 58px;
+  height: 58px;
+}
+
+#springknop.ingedrukt {
+  background: rgba(43, 35, 64, 0.55);
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* Op een computer met muis: geen joystick nodig */
+  #joystick-basis {
+    display: none;
+  }
+}
+
+/* ---------- Schermen ---------- */
+
+#schermen:empty {
+  display: none;
+}
+
+.scherm {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: rgba(43, 35, 64, 0.35);
+  overflow-y: auto;
+  touch-action: pan-y;
+  animation: vervagen 0.25s ease;
+}
+
+.scherm.doorzichtig {
+  background: transparent;
+}
+
+@keyframes vervagen {
+  from {
+    opacity: 0;
+  }
+}
+
+.kaart {
+  width: min(560px, 100%);
+  background: var(--paneel);
+  border-radius: 28px;
+  padding: 28px 28px 24px;
+  text-align: center;
+  box-shadow: 0 8px 0 rgba(43, 35, 64, 0.2), 0 20px 50px rgba(43, 35, 64, 0.3);
+  animation: opspringen 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes opspringen {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+
+.kaart h1,
+.kaart h2 {
+  margin: 0 0 10px;
+  line-height: 1.1;
+}
+
+.kaart h2 {
+  font-size: 34px;
+}
+
+.kaart p {
+  font-size: 21px;
+  line-height: 1.4;
+  margin: 8px 0;
+}
+
+.knop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 0 30px;
+  border: none;
+  border-radius: 18px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--groen);
+  box-shadow: 0 6px 0 var(--groen-donker);
+  margin: 10px 6px 0;
+}
+
+.knop:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--groen-donker);
+}
+
+.knop.blauw {
+  background: var(--blauw);
+  box-shadow: 0 6px 0 var(--blauw-donker);
+}
+
+.knop.blauw:active {
+  box-shadow: 0 2px 0 var(--blauw-donker);
+}
+
+.knop.wit {
+  background: #f1eefb;
+  color: var(--inkt);
+  box-shadow: 0 6px 0 #d6d0ea;
+}
+
+/* Titelscherm */
+.titel {
+  text-align: center;
+  color: #fff;
+}
+
+.titel h1 {
+  font-size: clamp(54px, 11vw, 110px);
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: 1px;
+  text-shadow: 0 6px 0 var(--paars-donker), 0 12px 30px rgba(43, 35, 64, 0.4);
+  -webkit-text-stroke: 3px var(--paars-donker);
+}
+
+.titel .ondertitel {
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 800;
+  margin: 8px 0 26px;
+  text-shadow: 0 2px 0 rgba(43, 35, 64, 0.45);
+}
+
+.titel .knop {
+  font-size: 32px;
+  min-height: 80px;
+  padding: 0 60px;
+  border-radius: 24px;
+}
+
+/* Dieren kiezen */
+.kleuren {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.kleur {
+  width: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--inkt);
+  padding: 0;
+}
+
+.kleur span.rondje {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 3px #d6d0ea;
+}
+
+.kleur.gekozen span.rondje {
+  box-shadow: 0 0 0 4px var(--paars);
+  transform: scale(1.08);
+}
+
+.naamveld {
+  width: 100%;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 3px solid #d6d0ea;
+  color: var(--inkt);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.naamveld:focus {
+  outline: none;
+  border-color: var(--paars);
+}
+
+.kaart .hint {
+  min-height: 28px;
+  color: #c2410c;
+  font-weight: 700;
+  font-size: 19px;
+}
+
+/* Tipkaart na een foute deur */
+.kaart .woord-groot {
+  font-size: clamp(46px, 8vw, 72px);
+  font-weight: 900;
+  color: var(--groen-donker);
+  margin: 6px 0 0;
+  letter-spacing: 1px;
+}
+
+.kaart .woord-fout {
+  font-size: 26px;
+  font-weight: 700;
+  color: #9a93ad;
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+  margin: 0 0 10px;
+}
+
+.kaart .tip {
+  background: #fff6db;
+  border-radius: 16px;
+  padding: 14px 18px;
+  text-align: left;
+}
+
+.kaart .sterren {
+  font-size: 44px;
+  margin: 6px 0;
+}
+
+.uitleg-lijst {
+  text-align: left;
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+
+.uitleg-lijst div {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.uitleg-lijst b.icoon {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #f1eefb;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+}

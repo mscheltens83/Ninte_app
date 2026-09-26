@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Nintes Wereld</title>
+    <meta name="description" content="Een Roblox-achtig spellingspel met paarden en honden." />
+    <meta name="theme-color" content="#7b4dff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nintes Wereld" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="./icons/icoon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  </head>
+  <body>
+    <div id="spel">
+      <canvas id="canvas"></canvas>
+      <div id="vlak"></div>
+
+      <div id="hud">
+        <div id="hoefijzers" class="paneel">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M14 8 C6 26 8 50 32 56 C56 50 58 26 50 8" fill="none" stroke="#e0a800" stroke-width="12" stroke-linecap="round" />
+            <path d="M14 8 C6 26 8 50 32 56 C56 50 58 26 50 8" fill="none" stroke="#ffcf33" stroke-width="7" stroke-linecap="round" />
+          </svg>
+          <span id="aantal">0</span>
+        </div>
+        <div id="knoppen-rechts">
+          <button id="knop-geluid" class="ronde-knop" aria-label="Geluid aan of uit">🔊</button>
+          <button id="knop-uitleg" class="ronde-knop" aria-label="Uitleg">?</button>
+        </div>
+        <div id="banner" class="paneel" hidden>
+          <p id="banner-tekst"></p>
+          <button id="banner-spreek" class="ronde-knop klein" aria-label="Lees voor">🔊</button>
+        </div>
+        <div id="melding" aria-live="polite"></div>
+        <div id="joystick-basis"><div id="joystick-knop"></div></div>
+        <button id="springknop" aria-label="Springen">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 14 L50 36 H38 V50 H26 V36 H14 Z" fill="#fff" /></svg>
+        </button>
+      </div>
+
+      <div id="schermen"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
