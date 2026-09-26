@@ -85,9 +85,13 @@ spel.hud.uitlegKnop.addEventListener('click', () => {
 // Werkt ook offline, en als app op het beginscherm van de iPad.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      // Geen service worker: het spel werkt dan alleen online.
-    });
+    try {
+      navigator.serviceWorker.register('./sw.js').catch(() => {
+        // Geen service worker: het spel werkt dan alleen online.
+      });
+    } catch {
+      // Sommige omgevingen (zoals een ingesloten pagina) staan dit niet toe.
+    }
   });
 }
 
