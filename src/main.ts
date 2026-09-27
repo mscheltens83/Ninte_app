@@ -20,7 +20,7 @@ function welkom() {
   const tekst = spel.seizoen
     ? seizoenGroet(spel.seizoen, stand.speler)
     : `Hoi ${stand.speler}! Volg de bordjes naar de Deuren-obby of de Reken-obby.`;
-  const sleutel = spel.seizoen ? undefined : 'welkom-terug';
+  const sleutel = spel.seizoen ? undefined : ['hoi', 'volg-bordjes'];
   spel.hud.toonBanner(tekst, () => spreek(tekst, sleutel), { duur: 7000 });
   spreek(tekst, sleutel);
 }
@@ -59,7 +59,7 @@ function kiesDieren() {
           bewaarStand(stand);
           spel.maakDieren();
           spel.geluid.blaf();
-          spreek(`${naam}. Wat een leuke naam! En nu maak je je eigen poppetje.`, 'leuke-naam');
+          spreek(`${naam}. Wat een leuke naam! En nu maak je je eigen poppetje.`, ['mooie-naam', 'maak-poppetje']);
           // Vooraf: eerst het poppetje aankleden, dan de uitleg.
           sluitScherm();
           spel.begin();
@@ -80,7 +80,7 @@ titelScherm(() => {
   spel.startGeluid();
   spel.geluid.klik();
   if (!stand.pony || !stand.puppy) {
-    spreek(`Hoi ${stand.speler}! Welkom in Nintes Wereld.`, 'welkom');
+    spreek(`Hoi ${stand.speler}! Welkom in Nintes Wereld.`, ['hoi', 'welkom']);
     kiesDieren();
   } else {
     speelVerder();

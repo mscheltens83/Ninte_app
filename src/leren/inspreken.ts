@@ -1,29 +1,69 @@
 // De zinnen die je zelf kunt inspreken, en het opnemen en afspelen ervan.
-// Opnames blijven op de iPad (IndexedDB). Wat niet is ingesproken, leest
-// de computerstem voor.
+// De meeste zinnen zijn universeel (aanmoedigen, troosten, uitleg) en passen
+// bij elk woord en elke som. Voor het dictee spreek je alleen het woord in.
+// Opnames blijven op het apparaat (IndexedDB). Wat niet is ingesproken,
+// leest de computerstem voor.
 
 import { alles, bewaar, verwijder } from '../opslag/db';
 import { WOORDEN } from './woorden';
 
+export type InspreekGroep = 'Begroeten' | 'Aanmoedigen' | 'Troosten' | 'Uitleg en beloning' | 'Woorden voor het dictee';
+
 export interface InspreekZin {
   sleutel: string;
   tekst: string;
-  groep: 'Welkom en uitleg' | 'Aanmoedigen' | 'Dictee-zinnen';
+  groep: InspreekGroep;
 }
 
+/** Wat elke groep doet, voor bovenaan in de lijst. */
+export const GROEP_UITLEG: Record<InspreekGroep, string> = {
+  Begroeten: 'Als het spel begint.',
+  Aanmoedigen: 'Bij een goed antwoord kiest het spel er steeds eentje uit. Hoe meer je er inspreekt, hoe meer afwisseling.',
+  Troosten: 'Bij een fout antwoord, voordat het trucje komt. Ook hier kiest het spel er steeds eentje uit.',
+  'Uitleg en beloning': 'Bij de obby, de finish, geheimen en nieuwe kleding. Deze zinnen passen bij spelling én rekenen.',
+  'Woorden voor het dictee': 'Alleen het woord zelf, bijvoorbeeld "paard". De zin staat al op het bord. Nieuwe woorden spreek je later op dezelfde manier in.',
+};
+
 export const INSPREEK_ZINNEN: InspreekZin[] = [
-  { sleutel: 'welkom', tekst: 'Hoi Ninte! Welkom in Nintes Wereld.', groep: 'Welkom en uitleg' },
-  { sleutel: 'welkom-terug', tekst: 'Hoi Ninte! Volg de bordjes naar de Deuren-obby of de Reken-obby.', groep: 'Welkom en uitleg' },
-  { sleutel: 'uitleg-deuren', tekst: 'Deuren-obby! Loop steeds door de deur met de goede spelling.', groep: 'Welkom en uitleg' },
-  { sleutel: 'uitleg-reken', tekst: 'Reken-obby! Loop steeds door de deur met het goede antwoord.', groep: 'Welkom en uitleg' },
-  { sleutel: 'schatkist', tekst: 'Een schatkist! Weet jij het geheime wachtwoord?', groep: 'Welkom en uitleg' },
-  { sleutel: 'mooie-naam', tekst: 'Wat een mooie naam!', groep: 'Aanmoedigen' },
-  { sleutel: 'leuke-naam', tekst: 'Wat een leuke naam! En nu maak je je eigen poppetje.', groep: 'Aanmoedigen' },
-  { sleutel: 'goed-zo', tekst: 'Goed zo!', groep: 'Aanmoedigen' },
-  { sleutel: 'obby-gehaald', tekst: 'Obby gehaald! Goed gedaan!', groep: 'Aanmoedigen' },
-  // Zoals bij een dictee: eerst het woord, dan de zin, dan nog een keer het woord.
-  ...WOORDEN.map((k) => ({ sleutel: `dictee-${k.woord}`, tekst: `${k.woord} … ${k.zin} … ${k.woord}`, groep: 'Dictee-zinnen' as const })),
+  { sleutel: 'hoi', tekst: 'Hoi Ninte!', groep: 'Begroeten' },
+  { sleutel: 'welkom', tekst: 'Welkom in Nintes Wereld!', groep: 'Begroeten' },
+  { sleutel: 'volg-bordjes', tekst: "Volg de bordjes naar de obby's!", groep: 'Begroeten' },
+
+  { sleutel: 'goed-1', tekst: 'Goed zo!', groep: 'Aanmoedigen' },
+  { sleutel: 'goed-2', tekst: 'Super!', groep: 'Aanmoedigen' },
+  { sleutel: 'goed-3', tekst: 'Knap hoor!', groep: 'Aanmoedigen' },
+  { sleutel: 'goed-4', tekst: 'Wauw, helemaal goed!', groep: 'Aanmoedigen' },
+  { sleutel: 'goed-5', tekst: 'Jij bent een kanjer!', groep: 'Aanmoedigen' },
+
+  { sleutel: 'fout-1', tekst: 'Bijna!', groep: 'Troosten' },
+  { sleutel: 'fout-2', tekst: 'Oeps, dat was de verkeerde deur.', groep: 'Troosten' },
+  { sleutel: 'fout-3', tekst: 'Geeft niks, probeer het nog een keer!', groep: 'Troosten' },
+
+  { sleutel: 'kies-deur', tekst: 'Loop steeds door de deur met het goede antwoord.', groep: 'Uitleg en beloning' },
+  { sleutel: 'obby-gehaald', tekst: 'Je hebt de obby gehaald! Goed gedaan!', groep: 'Uitleg en beloning' },
+  { sleutel: 'geheim', tekst: 'Je hebt een geheim gevonden!', groep: 'Uitleg en beloning' },
+  { sleutel: 'hoefijzer', tekst: 'Een gouden hoefijzer!', groep: 'Uitleg en beloning' },
+  { sleutel: 'kleding', tekst: 'Er hangt iets nieuws in je kledingkast!', groep: 'Uitleg en beloning' },
+  { sleutel: 'schatkist', tekst: 'Een schatkist! Weet jij het geheime wachtwoord?', groep: 'Uitleg en beloning' },
+  { sleutel: 'mooie-naam', tekst: 'Wat een mooie naam!', groep: 'Uitleg en beloning' },
+  { sleutel: 'maak-poppetje', tekst: 'Maak nu je eigen poppetje!', groep: 'Uitleg en beloning' },
+
+  ...WOORDEN.map((k) => ({ sleutel: `woord-${k.woord}`, tekst: k.woord, groep: 'Woorden voor het dictee' as const })),
 ];
+
+/** Waarom opnemen (niet) kan. */
+export type MicStatus = 'kan' | 'voorbeeldlink' | 'niet-ondersteund';
+
+/** Uitleg om de microfoon toe te staan, passend bij het apparaat. */
+export function microfoonHulp(ua = typeof navigator === 'undefined' ? '' : navigator.userAgent): string {
+  if (/Android/i.test(ua)) {
+    return 'De microfoon mag niet gebruikt worden. Tik in Chrome op het slotje (of ⋮ → Site-instellingen) links van het adres, zet Microfoon op Toestaan en probeer het opnieuw.';
+  }
+  if (/iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document)) {
+    return 'De microfoon mag niet gebruikt worden. Ga naar Instellingen → Safari → Microfoon, kies Vraag of Sta toe en probeer het opnieuw.';
+  }
+  return 'De microfoon mag niet gebruikt worden. Sta de microfoon toe in de instellingen van je browser en probeer het opnieuw.';
+}
 
 interface OpnameRij {
   sleutel: string;
@@ -56,13 +96,30 @@ export class Opnames {
     return INSPREEK_ZINNEN.filter((z) => this.rijen.has(z.sleutel)).length;
   }
 
-  /** Kan dit apparaat (in deze omgeving) opnemen? */
-  static kanOpnemen(): boolean {
-    return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  /**
+   * Kan er hier opgenomen worden? In de claude.ai-voorbeeldlink draait het spel
+   * in een ingesloten venster waar de microfoon nooit mag.
+   */
+  static micStatus(): MicStatus {
+    if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) return 'niet-ondersteund';
+    let ingesloten = false;
+    try {
+      ingesloten = window.self !== window.top;
+    } catch {
+      ingesloten = true;
+    }
+    return ingesloten ? 'voorbeeldlink' : 'kan';
+  }
+
+  /** Een willekeurige ingesproken zin uit een reeks (bijv. 'goed-'). */
+  speelWillekeurig(voorvoegsel: string, daarna?: () => void): boolean {
+    const keuzes = [...this.rijen.keys()].filter((k) => k.startsWith(voorvoegsel));
+    if (!keuzes.length) return false;
+    return this.speel(keuzes[Math.floor(Math.random() * keuzes.length)], daarna);
   }
 
   /** Een opname afspelen. Geeft false als die zin niet is ingesproken. */
-  speel(sleutel: string): boolean {
+  speel(sleutel: string, daarna?: () => void): boolean {
     const data = this.rijen.get(sleutel);
     const ctx = this.context();
     if (!data || !ctx) return false;
@@ -91,6 +148,7 @@ export class Opnames {
         if (this.speelt === bron) {
           this.speelt = null;
           this.opBezig(false);
+          daarna?.();
         }
       };
       this.speelt = bron;

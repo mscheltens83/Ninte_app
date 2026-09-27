@@ -171,7 +171,7 @@ export class Spel {
     this.geluid.aan = stand.geluidAan;
     this.muziek.zetAan(stand.muziekAan);
     opSpreken((bezig) => this.muziek.demp(bezig));
-    stelOpnameSpelerIn((sleutel) => this.opnames.speel(sleutel));
+    stelOpnameSpelerIn((sleutels) => this.speelOpnames(sleutels));
     this.hud.zetHoefijzers(stand.hoefijzers);
     this.hud.zichtbaar(false);
 
@@ -318,12 +318,22 @@ export class Spel {
     });
   }
 
+  /** Ingesproken zinnen na elkaar afspelen, als ze er allemaal zijn. */
+  private speelOpnames(sleutels: string[]): boolean {
+    if (!sleutels.every((k) => this.opnames.heeft(k))) return false;
+    const volgende = (i: number) => {
+      if (i < sleutels.length) this.opnames.speel(sleutels[i], () => volgende(i + 1));
+    };
+    volgende(0);
+    return true;
+  }
+
   /** Zelf de zinnen inspreken. De muziek staat dan even stil. */
   private toonInspreken() {
     this.muziek.zetAan(false);
     inspreekScherm({
       zinnen: INSPREEK_ZINNEN,
-      kanOpnemen: Opnames.kanOpnemen(),
+      micStatus: Opnames.micStatus(),
       heeft: (sleutel) => this.opnames.heeft(sleutel),
       opOpnemen: () => {
         this.opnames.stop();
@@ -547,8 +557,8 @@ export class Spel {
       this.geluid.fanfare();
       const tekst = `Nieuw in je kledingkast: ${nieuw.join(' en ')}!`;
       window.setTimeout(() => {
-        this.hud.toonBanner(`👕 ${veilig(tekst)}`, () => spreek(tekst), { goed: true, duur: 5000 });
-        if (this.modus === 'spelen') spreek(tekst);
+        this.hud.toonBanner(`👕 ${veilig(tekst)}`, () => spreek(tekst, 'kleding'), { goed: true, duur: 5000 });
+        if (this.modus === 'spelen') spreek(tekst, 'kleding');
       }, 1800);
     }
     return nieuw;
@@ -779,8 +789,8 @@ export class Spel {
     this.geluid.magie();
     const p = this.speler.pos;
     this.effecten.goudregen(new THREE.Vector3(p.x, p.y + 2.5, p.z));
-    this.hud.toonBanner(`⭐ <b>Geheim gevonden: ${veilig(titel)}</b><br>${veilig(tekst)}`, () => spreek(tekst), { goed: true, duur: 5000 });
-    spreek(tekst);
+    this.hud.toonBanner(`⭐ <b>Geheim gevonden: ${veilig(titel)}</b><br>${veilig(tekst)}`, () => spreek(tekst, 'geheim'), { goed: true, duur: 5000 });
+    spreek(tekst, 'geheim');
     this.meldNieuweKleding(kledingVoor);
   }
 
@@ -812,8 +822,8 @@ export class Spel {
             this.vindGeheim('eenhoorn', 'Magische pony', `Alle gouden hoefijzers! ${naam} is nu een magische eenhoorn!`);
           } else {
             const tekst = `Een gouden hoefijzer! Je hebt er ${n} van de ${AANTAL_GOUDEN}.`;
-            this.hud.toonBanner(`✨ ${tekst}`, () => spreek(tekst), { goed: true, duur: 4000 });
-            spreek(tekst);
+            this.hud.toonBanner(`✨ ${tekst}`, () => spreek(tekst, 'hoefijzer'), { goed: true, duur: 4000 });
+            spreek(tekst, 'hoefijzer');
           }
           bewaarStand(this.stand);
           break;
@@ -882,9 +892,8 @@ export class Spel {
             const tekst = reken
               ? 'Reken-obby! Loop steeds door de deur met het goede antwoord.'
               : 'Deuren-obby! Loop steeds door de deur met de goede spelling.';
-            const sleutel = reken ? 'uitleg-reken' : 'uitleg-deuren';
-            this.hud.toonBanner(tekst, () => spreek(tekst, sleutel), { duur: 6000 });
-            spreek(tekst, sleutel);
+            this.hud.toonBanner(tekst, () => spreek(tekst, 'kies-deur'), { duur: 6000 });
+            spreek(tekst, 'kies-deur');
           }
           break;
         case 'nader': {
@@ -902,7 +911,7 @@ export class Spel {
             o.ronde.goedInEenKeer++;
           }
           this.geluid.goed();
-          this.opnames.speel('goed-zo'); // alleen als je het zelf hebt ingesproken
+          this.opnames.speelWillekeurig('goed-'); // alleen als je zelf aanmoedigingen hebt ingesproken
           this.effecten.confetti(new THREE.Vector3(p.na.x - 1, p.na.y + 2, this.speler.pos.z));
           this.effecten.ring(p.na.clone(), '#35c46a', 5);
           this.hud.toonBanner(`Goed zo! <b>${veilig(vraag.goed)}</b> ✔️`, null, { goed: true, duur: 1800 });
@@ -934,7 +943,8 @@ export class Spel {
               this.zetSpeler(p.voor, OBBY_RICHTING);
               this.hervat();
             });
-            spreek(uitleg);
+            // Eerst een ingesproken troostzinnetje (als dat er is), dan het trucje.
+            if (!this.opnames.speelWillekeurig('fout-', () => spreek(uitleg))) spreek(uitleg);
           }, 450);
           break;
         }

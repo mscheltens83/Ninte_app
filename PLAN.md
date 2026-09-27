@@ -191,7 +191,7 @@ tests/
 ### Ronde 3 ✅ gebouwd
 - ✅ **Rekenen**: de Reken-obby met tafels, deelsommen, plus en min tot 1000 en keersommen met een nul, met trucjes en herhaalbakjes.
 - ✅ **Karakter veranderen**: een kledingkast met kapsels, kleuren, hoeden en extra's. Vooraf maakt ze haar poppetje; na opdrachten en geheimen speelt ze nieuwe kleding vrij, en met hoefijzers kan ze kleding kopen.
-- ✅ **Zelf inspreken**: 62 zinnen (welkom, aanmoediging en 53 dictee-zinnen), die de computerstem vervangen.
+- ✅ **Zelf inspreken**: 19 universele zinnen (begroeten, aanmoedigen, troosten, uitleg en beloning) plus los de woorden voor het dictee. Ze vervangen de computerstem.
 - ✅ **Meer muziek**: afspeellijsten per plek; nieuwe MP3's komen er vanzelf bij, of je voegt ze op de iPad toe.
 - ✅ **Meer effecten**: vuurwerk, stofwolkjes, vlinders, vissen, glinsters, vliegende hoefijzers en een toverwolk.
 

@@ -27,7 +27,7 @@ export function spellingVraag(kaart: Woordkaart): Vraag {
     goed: kaart.woord,
     fout: maakFouteVariant(kaart),
     voorlezen: voorleesTekst(kaart),
-    opname: `dictee-${kaart.woord}`,
+    opname: `woord-${kaart.woord}`,
     tip: tipVoor(kaart),
     tipTitel: 'De goede spelling is:',
   };

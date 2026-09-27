@@ -20,7 +20,7 @@ Het volledige plan staat in [PLAN.md](PLAN.md).
 - **Instellingen** (⚙️): geluidjes en muziek aan of uit, zelf de mooiste voorleesstem kiezen en het tempo instellen.
 - **Reken-obby**: een tweede obby met tafelsommen, deelsommen, plus en min tot 1000 en keersommen met een nul. Het vraagbord is een schoolbord, en bij een fout krijgt Ninte een trucje (bijvoorbeeld *"Eerst 5 × 7 = 35, en dan nog 7 erbij: 42"*). Tafelsommen die vaak misgaan, komen vaker terug.
 - **Kledingkast** (👕): kapsel, haarkleur, huidskleur, kleding, hoeden en extra's zoals een cape of vleugels. Sommige dingen koop je met hoefijzers, andere speel je vrij: een rijcap voor de Deuren-obby, een cowboyhoed voor de Reken-obby, een gouden kroon voor alle deuren in één keer goed, en vleugels, een zonnebril en een eenhoornhoorn voor geheimen. De eerste keer maakt Ninte vooraf haar eigen poppetje.
-- **Zelf inspreken** (⚙️ → 🎙️): 62 zinnen, waarvan 53 dictee-zinnen. Wat je hebt ingesproken, vervangt de computerstem. Stilte aan het begin en eind wordt automatisch weggeknipt. Werkt in de app-versie op de iPad (niet in de claude.ai-link).
+- **Zelf inspreken** (⚙️ → 🎙️): 19 universele zinnen die bij elk woord en elke som passen (begroeten, aanmoedigen, troosten, uitleg en beloning), plus los de 53 woorden voor het dictee (alleen het woord zelf). Bij aanmoedigen en troosten kiest het spel steeds een andere zin. Wat je hebt ingesproken, vervangt de computerstem; stilte aan het begin en eind wordt automatisch weggeknipt. Werkt in de app-versie op iPad en Android, niet in de claude.ai-link (daar mag de microfoon niet).
 - **Meer effecten**: vuurwerk, stofwolkjes bij het springen, vlinders, springende vissen, glinsters op het water, hoefijzers die naar de teller vliegen en een toverwolk bij het omkleden.
 - **Geheimen** (⭐): 9 easter eggs om te ontdekken. Het geheimenboek geeft hints. Spoiler: zie hieronder.
 
@@ -53,11 +53,13 @@ De repository is privé. GitHub Pages werkt daarom alleen met een betaald accoun
 
 Elke keer dat er iets nieuws op die branch komt, zet Netlify de nieuwe versie vanzelf online.
 
-### 2. Zet het als app op de iPad
+### 2. Zet het als app op de iPad (of Android)
 
 1. Open het adres in **Safari** op de iPad.
 2. Tik op de deelknop (vierkantje met pijl) en kies **Zet op beginscherm**.
 3. Nu opent Nintes Wereld schermvullend, als een echte app. Het werkt ook zonder internet.
+
+Op **Android**: open het adres in Chrome, tik op ⋮ en kies **App installeren** (of **Toevoegen aan startscherm**).
 
 Speel altijd via het icoon op het beginscherm. Safari kan bewaarde gegevens van gewone websites wissen als ze een tijd niet gebruikt zijn. Voor apps op het beginscherm gebeurt dat niet.
 

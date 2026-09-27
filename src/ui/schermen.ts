@@ -2,7 +2,7 @@
 
 import type { Vacht } from '../figuren/dieren';
 import { PLEKKEN, type Plek } from '../geluid/muziek';
-import type { InspreekZin } from '../leren/inspreken';
+import { GROEP_UITLEG, microfoonHulp, type InspreekZin, type MicStatus } from '../leren/inspreken';
 import { KAST, KLEUREN, itemStatus, slotTekst, type KastItem, type KastStand, type Uiterlijk } from '../figuren/uiterlijk';
 import { veilig } from './hud';
 
@@ -257,9 +257,9 @@ export function instellingenScherm(o: InstellingenOpties) {
       <div class="rij"><span>Tempo</span><div class="tempo">${TEMPO_KEUZES.map(
         ([naam, t]) => `<button class="tempo-knop${Math.abs(o.tempo - t) < 0.01 ? ' gekozen' : ''}" data-tempo="${t}">${naam}</button>`,
       ).join('')}</div></div>
-      <p class="tip">Klinkt de stem als een robot? Download op de iPad een mooiere stem:
-        <b>Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands</b>.
-        Kies een stem met <b>(Verbeterd)</b> of <b>(Premium)</b> achter de naam en start het spel opnieuw.</p>
+      <p class="tip">Klinkt de stem als een robot? Download een mooiere Nederlandse stem en start het spel opnieuw.<br>
+        <b>iPad:</b> Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands (kies een stem met <b>Verbeterd</b> of <b>Premium</b>).<br>
+        <b>Android:</b> Instellingen → zoek op <b>Tekst-naar-spraak</b> → Spraakengine van Google → Nederlands installeren.</p>
       <p class="klein">Ingebouwde muziek: "Carefree", "Monkeys Spinning Monkeys" en "Fluffing a Duck" van Kevin MacLeod (incompetech.com), licentie CC BY 4.0. Eigen muziek blijft alleen op dit apparaat.</p>
       <button class="knop" data-klaar>Klaar</button>
     </div>`,
@@ -482,7 +482,7 @@ export function kastScherm(o: KastOpties) {
 
 export interface InspreekOpties {
   zinnen: InspreekZin[];
-  kanOpnemen: boolean;
+  micStatus: MicStatus;
   heeft(sleutel: string): boolean;
   opOpnemen(sleutel: string): Promise<void>;
   opStop(sleutel: string): Promise<boolean>;
@@ -494,18 +494,25 @@ export interface InspreekOpties {
 /** Zelf de zinnen inspreken: opnemen, terugluisteren, opnieuw of wissen. */
 export function inspreekScherm(o: InspreekOpties) {
   const groepen = [...new Set(o.zinnen.map((z) => z.groep))];
+  const kanOpnemen = o.micStatus === 'kan';
+  const micMelding =
+    o.micStatus === 'voorbeeldlink'
+      ? 'In deze voorbeeldlink (claude.ai) mag het spel de microfoon niet gebruiken, op geen enkel apparaat. Inspreken werkt in de app-versie van het spel (zie de uitleg over Netlify).'
+      : o.micStatus === 'niet-ondersteund'
+        ? 'Deze browser kan niet opnemen. Probeer Chrome (Android) of Safari (iPad).'
+        : '';
   const s = toon(
     `<div class="kaart inspreken">
       <h2>🎙️ Stem inspreken</h2>
       <p class="voortgang"></p>
-      <p class="tip">Tik op <b>Opnemen</b>, lees de zin rustig voor en tik op <b>Stop</b>.
-        Bij de dictee-zinnen zeg je het woord, dan de zin, en dan nog een keer het woord.
-        Wat je nog niet hebt ingesproken, leest de computerstem voor.</p>
-      ${o.kanOpnemen ? '' : '<p class="hint">Opnemen werkt hier niet. Zet het spel als app op het beginscherm van de iPad en probeer het daar.</p>'}
+      <p class="tip">Tik op <b>Opnemen</b>, zeg de zin rustig en tik op <b>Stop</b>.
+        De meeste zinnen passen bij elk woord en elke som. Je hoeft niet alles in te spreken:
+        wat je niet inspreekt, leest de computerstem voor.</p>
+      ${micMelding ? `<p class="hint">${veilig(micMelding)}</p>` : ''}
       <p class="hint" data-melding></p>
       ${groepen
         .map(
-          (g) => `<h3>${veilig(g)}</h3>${o.zinnen
+          (g) => `<h3>${veilig(g)}</h3><p class="klein">${veilig(GROEP_UITLEG[g])}</p>${o.zinnen
             .filter((z) => z.groep === g)
             .map((z) => `<div class="zin" data-zin="${veilig(z.sleutel)}"><p>${veilig(z.tekst)}</p><div class="zin-knoppen"></div></div>`)
             .join('')}`,
@@ -534,7 +541,7 @@ export function inspreekScherm(o: InspreekOpties) {
       knoppen.innerHTML = '<button class="opname-knop stop" data-actie="stop">⏹ Stop</button>';
     } else {
       knoppen.innerHTML = `
-        <button class="opname-knop" data-actie="op" ${!o.kanOpnemen || opnemend ? 'disabled' : ''}>🔴 ${heeft ? 'Opnieuw' : 'Opnemen'}</button>
+        <button class="opname-knop" data-actie="op" ${!kanOpnemen || opnemend ? 'disabled' : ''}>🔴 ${heeft ? 'Opnieuw' : 'Opnemen'}</button>
         ${heeft ? '<button class="opname-knop" data-actie="luister" aria-label="Luister">▶️</button><button class="opname-knop" data-actie="wis" aria-label="Wis">🗑</button>' : ''}`;
     }
   };
@@ -557,7 +564,7 @@ export function inspreekScherm(o: InspreekOpties) {
           await o.opOpnemen(sleutel);
           opnemend = sleutel;
         } catch {
-          melding.textContent = 'De microfoon werkt niet. Sta de microfoon toe (Instellingen → Safari → Microfoon) en probeer het opnieuw.';
+          melding.textContent = microfoonHulp();
         }
         tekenAlles();
         break;
