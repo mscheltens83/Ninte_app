@@ -18,6 +18,10 @@ Het volledige plan staat in [PLAN.md](PLAN.md).
 - Geen game-over, geen tijdsdruk, geen chat en geen aankopen. De voortgang blijft op de iPad zelf bewaard.
 - **Echte muziek**: een vrolijk nummer op het eiland, een snel nummer in de obby en een grappig nummer op een geheime plek.
 - **Instellingen** (⚙️): geluidjes en muziek aan of uit, zelf de mooiste voorleesstem kiezen en het tempo instellen.
+- **Reken-obby**: een tweede obby met tafelsommen, deelsommen, plus en min tot 1000 en keersommen met een nul. Het vraagbord is een schoolbord, en bij een fout krijgt Ninte een trucje (bijvoorbeeld *"Eerst 5 × 7 = 35, en dan nog 7 erbij: 42"*). Tafelsommen die vaak misgaan, komen vaker terug.
+- **Kledingkast** (👕): kapsel, haarkleur, huidskleur, kleding, hoeden en extra's zoals een cape of vleugels. Sommige dingen koop je met hoefijzers, andere speel je vrij: een rijcap voor de Deuren-obby, een cowboyhoed voor de Reken-obby, een gouden kroon voor alle deuren in één keer goed, en vleugels, een zonnebril en een eenhoornhoorn voor geheimen. De eerste keer maakt Ninte vooraf haar eigen poppetje.
+- **Zelf inspreken** (⚙️ → 🎙️): 62 zinnen, waarvan 53 dictee-zinnen. Wat je hebt ingesproken, vervangt de computerstem. Stilte aan het begin en eind wordt automatisch weggeknipt. Werkt in de app-versie op de iPad (niet in de claude.ai-link).
+- **Meer effecten**: vuurwerk, stofwolkjes bij het springen, vlinders, springende vissen, glinsters op het water, hoefijzers die naar de teller vliegen en een toverwolk bij het omkleden.
 - **Geheimen** (⭐): 9 easter eggs om te ontdekken. Het geheimenboek geeft hints. Spoiler: zie hieronder.
 
 ## Geheimen (spoiler, alleen voor ouders!)
@@ -103,10 +107,17 @@ De foute variant voor de deur (`paart`) en het trucje maakt het spel zelf. `npm 
 
 ## Muziek
 
-De muziek is van Kevin MacLeod ([incompetech.com](https://incompetech.com)) en valt onder de licentie [Creative Commons Naamsvermelding 4.0](https://creativecommons.org/licenses/by/4.0/):
+De ingebouwde muziek is van Kevin MacLeod ([incompetech.com](https://incompetech.com)) en valt onder de licentie [Creative Commons Naamsvermelding 4.0](https://creativecommons.org/licenses/by/4.0/):
 
-- `public/muziek/eiland.mp3`: "Carefree"
-- `public/muziek/obby.mp3`: "Monkeys Spinning Monkeys"
-- `public/muziek/geheim.mp3`: "Fluffing a Duck"
+- `src/muziek/eiland/carefree.mp3`: "Carefree"
+- `src/muziek/obby/monkeys-spinning-monkeys.mp3`: "Monkeys Spinning Monkeys"
+- `src/muziek/geheim/fluffing-a-duck.mp3`: "Fluffing a Duck"
 
-De bestanden zijn omgezet naar mono MP3 (64 kbps), zodat ze snel laden en weinig geheugen gebruiken op de iPad.
+### Meer muziek toevoegen
+
+Er zijn twee manieren:
+
+1. **Op de iPad zelf**: ⚙️ → *Eigen muziek toevoegen*. Kies waar het nummer moet spelen (eiland, obby's of geheime plek) en kies een MP3 uit de Bestanden-app. Het nummer blijft alleen op die iPad.
+2. **In het spel zelf (voor elk apparaat)**: zet MP3-bestanden in de juiste map in `src/muziek/` (`eiland/`, `obby/` of `geheim/`). Via de GitHub-website: open de map, kies **Add file → Upload files** en sleep de MP3's erin. Na het bouwen staan ze vanzelf in de afspeellijst.
+
+Heeft een plek meer nummers, dan speelt het spel ze na elkaar af. Met ⏭ in de instellingen ga je naar het volgende nummer. Tip: kleine bestanden (mono, 64 kbps) laden sneller. Gebruik muziek die je mag gebruiken. Voor thuisgebruik is gekochte muziek prima, maar zet de app dan niet openbaar online.

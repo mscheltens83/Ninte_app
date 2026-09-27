@@ -3,20 +3,24 @@
 
 import * as THREE from 'three';
 import { Avatar } from '../figuren/avatar';
+import { KAST, beschikbareItems, koop, type Uiterlijk } from '../figuren/uiterlijk';
 import { HOND_KLEUREN, PONY_KLEUREN, Pony, Puppy, vachtVan } from '../figuren/dieren';
 import { Geluid } from '../geluid/geluid';
 import { Muziek } from '../geluid/muziek';
 import { kiesWoorden, verwerkAntwoord } from '../leren/herhaalbakjes';
-import { tipVoor, voorleesTekst, zinMetGat } from '../leren/spelling';
-import { nederlandseStemmen, opSpreken, spreek, stelStemIn } from '../leren/voorlezen';
-import { WOORDEN, type Categorie, type Woordkaart } from '../leren/woorden';
+import { kiesSommen, rekenVraag } from '../leren/rekenen';
+import { spellingVraag, type Vraag } from '../leren/vragen';
+import { INSPREEK_ZINNEN, Opnames } from '../leren/inspreken';
+import { nederlandseStemmen, opSpreken, spreek, stelOpnameSpelerIn, stelStemIn } from '../leren/voorlezen';
+import { WOORDEN, type Categorie } from '../leren/woorden';
 import { bewaarStand, type Spelstand } from '../opslag/opslag';
 import { Hud, veilig } from '../ui/hud';
-import { finishKaart, geheimenScherm, instellingenScherm, sluitScherm, tipKaart, wachtwoordScherm } from '../ui/schermen';
-import { AANTAL_POORTEN, DeurenObby, type ObbyGebeurtenis, type Poort } from '../wereld/deurenObby';
+import { finishKaart, geheimenScherm, inspreekScherm, instellingenScherm, kastScherm, sluitScherm, tipKaart, wachtwoordScherm } from '../ui/schermen';
+import { AANTAL_POORTEN, DeurenObby, REKEN_THEMA, SPELLING_THEMA, type ObbyGebeurtenis, type Poort } from '../wereld/deurenObby';
 import { EILAND_RAND, STARTPUNT, WATER_HOOGTE, bouwEiland, type Eiland } from '../wereld/eiland';
 import { GEHEIMEN, Geheimen, WACHTWOORD, type GeheimGebeurtenis } from '../wereld/geheimen';
 import { bouwSeizoen, kerstmuts, kroontje, seizoenOp, type Seizoen, type SeizoenVersiering } from '../wereld/seizoen';
+import { Leven, isWater } from '../wereld/leven';
 import { Effecten } from '../wereld/versiering';
 import { Besturing } from './besturing';
 import { Fysica, type Lichaam } from './fysica';
@@ -29,13 +33,20 @@ const COYOTE_TIJD = 0.14; // je mag nét na de rand nog springen
 const SPRING_BUFFER = 0.16; // te vroeg getikt telt ook
 const DANS_NA = 12; // seconden stilstaan voordat Ninte gaat dansen
 const OBBY_OORSPRONG = new THREE.Vector3(29, 0, 7.5);
-const WACHTPLEK_PONY = new THREE.Vector3(25.5, 0, 4.5);
-const WACHTPLEK_PUPPY = new THREE.Vector3(26, 0, 10.5);
+const REKEN_OORSPRONG = new THREE.Vector3(29, 0, -18);
 const CATEGORIEEN: Categorie[] = ['langermaakwoord', 'ei-ij', 'au-ou'];
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
 const AANTAL_GOUDEN = 5;
 
-type Modus = 'titel' | 'spelen' | 'scherm';
+type Modus = 'titel' | 'spelen' | 'scherm' | 'kast';
+
+/** Wat het spel per obby bijhoudt. */
+interface ObbyStaat {
+  obby: DeurenObby;
+  klaar: boolean;
+  uitgelegd: boolean;
+  ronde: { goedInEenKeer: number; verdiend: number };
+}
 
 export class Spel {
   readonly renderer: THREE.WebGLRenderer;
@@ -44,6 +55,10 @@ export class Spel {
   readonly fysica = new Fysica();
   readonly geluid = new Geluid();
   readonly muziek = new Muziek(this.geluid);
+  readonly opnames = new Opnames(
+    () => this.geluid.context,
+    (bezig) => this.muziek.demp(bezig),
+  );
   readonly hud = new Hud();
   readonly besturing: Besturing;
   readonly speler: Lichaam = {
@@ -59,12 +74,16 @@ export class Spel {
 
   private eiland: Eiland;
   readonly obby: DeurenObby;
+  readonly rekenObby: DeurenObby;
+  private obbies: ObbyStaat[];
   readonly geheimen: Geheimen;
   private versiering: SeizoenVersiering | null = null;
-  private avatar = new Avatar();
+  private avatar: Avatar;
   private pony: Pony | null = null;
   private puppy: Puppy | null = null;
   private effecten: Effecten;
+  private leven: Leven;
+  private glinsterTimer = 0;
   private zon: THREE.DirectionalLight;
   private klok = new THREE.Timer();
   private straal = new THREE.Raycaster();
@@ -82,9 +101,6 @@ export class Spel {
   private terugTimer = -1;
   private titelTijd = 0;
   private tijd = 0;
-  private obbyKlaar = false;
-  private obbyUitgelegd = false;
-  private ronde = { goedInEenKeer: 0, verdiend: 0 };
   private stilTijd = 0;
   private dansen = false;
   private spoorTimer = 0;
@@ -115,13 +131,22 @@ export class Spel {
     this.scene.add(this.zon, this.zon.target);
 
     this.eiland = bouwEiland(this.scene, this.fysica);
-    this.obby = new DeurenObby(this.scene, this.fysica, OBBY_OORSPRONG);
-    this.obby.startRonde(this.kiesRondeWoorden());
+    this.obby = new DeurenObby(this.scene, this.fysica, OBBY_OORSPRONG, SPELLING_THEMA);
+    this.rekenObby = new DeurenObby(this.scene, this.fysica, REKEN_OORSPRONG, REKEN_THEMA);
+    this.obbies = [this.obby, this.rekenObby].map((obby) => ({
+      obby,
+      klaar: false,
+      uitgelegd: false,
+      ronde: { goedInEenKeer: 0, verdiend: 0 },
+    }));
+    for (const o of this.obbies) o.obby.startRonde(this.nieuweVragen(o.obby));
     this.geheimen = new Geheimen(this.scene, this.fysica, this.obby.finishPunt);
     this.geheimen.verberg(stand.goudenHoefijzers);
     if (stand.geheimen.includes('schatkist')) this.geheimen.openKist(true);
     this.effecten = new Effecten(this.scene);
+    this.leven = new Leven(this.scene, this.effecten);
 
+    this.avatar = new Avatar(stand.uiterlijk);
     this.scene.add(this.avatar.groep);
     this.avatar.groep.position.copy(STARTPUNT);
     this.avatar.groep.rotation.y = this.kijkHoek;
@@ -129,8 +154,8 @@ export class Spel {
       this.versiering = bouwSeizoen(this.scene, this.seizoen);
       const hoed = this.seizoen === 'winter' ? kerstmuts(1.1) : this.seizoen === 'koningsdag' ? kroontje(1) : null;
       if (hoed) {
-        hoed.position.copy(this.avatar.hoofdAnker);
-        this.avatar.groep.add(hoed);
+        this.avatar.seizoenHoed = hoed;
+        this.avatar.kleed(this.avatar.uiterlijk);
       }
     }
     this.maakDieren();
@@ -146,6 +171,7 @@ export class Spel {
     this.geluid.aan = stand.geluidAan;
     this.muziek.zetAan(stand.muziekAan);
     opSpreken((bezig) => this.muziek.demp(bezig));
+    stelOpnameSpelerIn((sleutel) => this.opnames.speel(sleutel));
     this.hud.zetHoefijzers(stand.hoefijzers);
     this.hud.zichtbaar(false);
 
@@ -191,15 +217,22 @@ export class Spel {
     this.eiland.hokBord.zetTekst(puppy ? puppy.naam : 'Hok');
   }
 
-  /** Van elke categorie evenveel woorden, lastige woorden vaker. */
-  private kiesRondeWoorden(): Woordkaart[] {
+  /** Nieuwe vragen voor een obby: woorden of sommen, lastige vaker. */
+  private nieuweVragen(obby: DeurenObby): Vraag[] {
+    if (obby.thema.id === 'rekenen') return kiesSommen(this.stand.sommen).map(rekenVraag);
     const perCategorie = Math.ceil(AANTAL_POORTEN / CATEGORIEEN.length);
     const woorden = CATEGORIEEN.flatMap((c) => kiesWoorden(WOORDEN, this.stand.woorden, perCategorie, [c]));
     for (let i = woorden.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [woorden[i], woorden[j]] = [woorden[j], woorden[i]];
     }
-    return woorden.slice(0, AANTAL_POORTEN);
+    return woorden.slice(0, AANTAL_POORTEN).map(spellingVraag);
+  }
+
+  /** De obby waar de speler nu in is (of undefined op het eiland). */
+  private huidigeObby(): ObbyStaat | undefined {
+    const p = this.speler.pos;
+    return this.obbies.find((o) => o.obby.bevat(p.x, p.z));
   }
 
   /** Van het titelscherm naar het spel. */
@@ -224,14 +257,30 @@ export class Spel {
     this.besturing.aan = true;
   }
 
-  toonInstellingen() {
+  toonInstellingen(klik = true) {
     if (this.modus !== 'spelen') return;
-    this.geluid.klik();
+    if (klik) this.geluid.klik();
     this.pauzeer();
     const proef = () => spreek(`Hoi ${this.stand.speler}! Zo klink ik.`);
     instellingenScherm({
       geluidAan: this.stand.geluidAan,
       muziekAan: this.stand.muziekAan,
+      nummers: this.muziek.nummers.map(({ id, naam, plek, eigen }) => ({ id, naam, plek, eigen })),
+      huidigNummer: this.muziek.huidigNummer?.naam ?? null,
+      opVolgende: () => {
+        this.muziek.volgende();
+        window.setTimeout(() => this.herlaadInstellingen(), 700);
+      },
+      opToevoegen: async (bestanden, plek) => {
+        const aantal = await this.muziek.voegToe(bestanden, plek);
+        this.herlaadInstellingen();
+        const tekst = aantal === 1 ? 'Nummer toegevoegd!' : `${aantal} nummers toegevoegd!`;
+        this.hud.toonBanner(`♪ ${tekst}`, null, { goed: true, duur: 3000 });
+      },
+      opVerwijder: async (id) => {
+        await this.muziek.verwijderEigen(id);
+        this.herlaadInstellingen();
+      },
       stemmen: nederlandseStemmen().map((s) => ({ naam: s.name, label: `${s.name} · ${s.lang}` })),
       stemNaam: this.stand.stemNaam,
       tempo: this.stand.stemTempo,
@@ -258,11 +307,47 @@ export class Spel {
         bewaarStand(this.stand);
         proef();
       },
+      opInspreken: () => {
+        this.geluid.klik();
+        this.toonInspreken();
+      },
       opSluit: () => {
         this.geluid.klik();
         this.hervat();
       },
     });
+  }
+
+  /** Zelf de zinnen inspreken. De muziek staat dan even stil. */
+  private toonInspreken() {
+    this.muziek.zetAan(false);
+    inspreekScherm({
+      zinnen: INSPREEK_ZINNEN,
+      kanOpnemen: Opnames.kanOpnemen(),
+      heeft: (sleutel) => this.opnames.heeft(sleutel),
+      opOpnemen: () => {
+        this.opnames.stop();
+        return this.opnames.begin();
+      },
+      opStop: (sleutel) => this.opnames.klaar(sleutel),
+      opLuister: (sleutel) => {
+        if (!this.opnames.speel(sleutel)) this.geluid.fout();
+      },
+      opWis: (sleutel) => this.opnames.wis(sleutel),
+      opSluit: () => {
+        this.opnames.annuleer();
+        this.muziek.zetAan(this.stand.muziekAan);
+        this.geluid.klik();
+        this.hervat();
+      },
+    });
+  }
+
+  /** Het instellingenscherm opnieuw tekenen (na muziek toevoegen of wisselen). */
+  private herlaadInstellingen() {
+    if (this.modus !== 'scherm' || !document.querySelector('.kaart.instellingen')) return;
+    this.modus = 'spelen';
+    this.toonInstellingen(false);
   }
 
   toonGeheimen() {
@@ -302,22 +387,25 @@ export class Spel {
     this.besturing.update();
 
     if (this.modus === 'titel') this.updateTitelCamera(dt);
+    if (this.modus === 'kast') this.updateKastCamera(dt);
     if (this.modus === 'spelen') {
       this.updateSpeler(dt);
-      this.verwerk(this.obby.update(dt, this.speler));
+      for (const o of this.obbies) this.verwerk(o, o.obby.update(dt, this.speler));
       this.verwerkGeheimen(this.geheimen.update(dt, this.speler));
       for (const tik of this.besturing.neemTikken()) this.tik(tik.x, tik.y);
     } else {
       const weg = { ...this.speler, pos: { x: -999, y: -999, z: -999 } };
-      this.obby.update(dt, weg);
+      for (const o of this.obbies) o.obby.update(dt, weg);
       this.geheimen.update(dt, weg);
     }
-    if (this.modus !== 'titel') {
+    if (this.modus === 'spelen' || this.modus === 'scherm') {
       this.updateCamera(dt);
-      const nummer = this.geheimen.opWolken(this.speler) ? 'geheim' : this.obby.bevat(this.speler.pos.x) ? 'obby' : 'eiland';
+      const nummer = this.geheimen.opWolken(this.speler) ? 'geheim' : this.huidigeObby() ? 'obby' : 'eiland';
       this.muziek.speel(nummer);
     }
     this.updateDieren(dt);
+    this.leven.update(dt, this.speler.pos);
+    this.updateGlinsters(dt);
     this.effecten.update(dt);
     this.versiering?.update(dt, this.camera.position, this.tijd);
     for (const w of this.eiland.wolken) {
@@ -331,6 +419,139 @@ export class Spel {
     this.zon.target.position.set(p.x, p.y, p.z);
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Glinsters: op het water, rond gouden hoefijzers en rond de eenhoorn. */
+  private updateGlinsters(dt: number) {
+    this.glinsterTimer -= dt;
+    if (this.glinsterTimer > 0) return;
+    this.glinsterTimer = 0.06;
+    const p = this.speler.pos;
+    for (let i = 0; i < 2; i++) {
+      const x = p.x + (Math.random() - 0.5) * 60;
+      const z = p.z + (Math.random() - 0.5) * 60;
+      if (isWater(x, z)) this.effecten.waterGlinster(new THREE.Vector3(x, WATER_HOOGTE + 0.03, z));
+    }
+    if (Math.random() < 0.35) {
+      for (const h of this.geheimen.zichtbareHoefijzers()) {
+        if (h.distanceTo(new THREE.Vector3(p.x, p.y, p.z)) > 40) continue;
+        this.effecten.glinster(h.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2)));
+      }
+    }
+    if (this.pony?.isMagisch && Math.random() < 0.5) {
+      const kop = this.pony.groep.localToWorld(this.pony.hoofdAnker.clone());
+      const kleuren = ['#ff9bd2', '#c9a7ff', '#fff6b0', '#8fd3ff'];
+      kop.add(new THREE.Vector3((Math.random() - 0.5) * 1.4, (Math.random() - 0.3) * 1.2, (Math.random() - 0.5) * 1.4));
+      this.effecten.glinster(kop, kleuren[Math.floor(Math.random() * kleuren.length)]);
+    }
+  }
+
+  /** In de kledingkast: de camera kijkt Ninte aan, zij staat links in beeld. */
+  private updateKastCamera(dt: number) {
+    const p = this.speler.pos;
+    const voor = new THREE.Vector3(Math.sin(this.kijkHoek), 0, Math.cos(this.kijkHoek));
+    const doelPos = new THREE.Vector3(p.x, p.y + 2.1, p.z).addScaledVector(voor, 5.4);
+    const camRechts = new THREE.Vector3().crossVectors(voor.clone().negate(), new THREE.Vector3(0, 1, 0)).normalize();
+    const staand = window.innerWidth < window.innerHeight;
+    const kijk = new THREE.Vector3(p.x, p.y + 1.35, p.z);
+    if (staand) kijk.y -= 1.0;
+    else kijk.addScaledVector(camRechts, 1.3);
+    const k = Math.min(1, dt * 5);
+    this.camera.position.lerp(doelPos, k);
+    this.camDoel.lerp(kijk, k);
+    this.camera.lookAt(this.camDoel);
+    this.avatar.groep.visible = true;
+    this.avatar.groep.rotation.y = this.kijkHoek + Math.sin(this.tijd * 0.9) * 0.5;
+    this.avatar.animeer(dt, 0, false);
+  }
+
+  /** Een kant op waar niets tussen Ninte en de camera staat (voor de kledingkast). */
+  private vrijeKijkHoek(): number {
+    const p = this.speler.pos;
+    const van = new THREE.Vector3(p.x, p.y + 1.6, p.z);
+    const negeer = new Set<THREE.Object3D>([this.avatar.groep]);
+    if (this.pony) negeer.add(this.pony.groep);
+    if (this.puppy) negeer.add(this.puppy.groep);
+    const straal = new THREE.Raycaster();
+    straal.far = 5.8;
+    straal.camera = this.camera; // nodig voor naamkaartjes (sprites)
+    for (const stap of [0, 1, -1, 2, -2, 3, -3, 4]) {
+      const hoek = this.kijkHoek + (stap * Math.PI) / 4;
+      straal.set(van, new THREE.Vector3(Math.sin(hoek), 0.1, Math.cos(hoek)).normalize());
+      const raak = straal.intersectObjects(this.scene.children, true).find((r) => {
+        let o: THREE.Object3D | null = r.object;
+        while (o) {
+          if (negeer.has(o)) return false;
+          o = o.parent;
+        }
+        return !(r.object instanceof THREE.InstancedMesh) && !(r.object instanceof THREE.Sprite) && !(r.object instanceof THREE.Points);
+      });
+      if (!raak) return hoek;
+    }
+    return this.kijkHoek;
+  }
+
+  /** De kledingkast openen. `daarna` wordt aangeroepen als ze op Klaar tikt. */
+  openKast(titel = 'Kledingkast', daarna?: () => void) {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.kijkHoek = this.vrijeKijkHoek();
+    this.camera.position.set(this.speler.pos.x, this.speler.pos.y + 3, this.speler.pos.z).addScaledVector(
+      new THREE.Vector3(Math.sin(this.kijkHoek), 0, Math.cos(this.kijkHoek)),
+      7,
+    );
+    this.modus = 'kast';
+    this.besturing.aan = false;
+    this.besturing.loslaten();
+    this.hud.zichtbaar(false);
+    this.hud.verbergBanner();
+    kastScherm({
+      titel,
+      uiterlijk: this.stand.uiterlijk,
+      stand: this.stand,
+      klik: () => this.geluid.klik(),
+      opKies: (u: Uiterlijk) => {
+        this.stand.uiterlijk = u;
+        this.avatar.kleed(u);
+        this.effecten.toverwolk(new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 1.3, this.speler.pos.z));
+        this.geluid.magie();
+        bewaarStand(this.stand);
+      },
+      opKoop: (item) => {
+        const gelukt = koop(item, this.stand);
+        if (gelukt) {
+          this.hud.zetHoefijzers(this.stand.hoefijzers);
+          this.geluid.munt();
+          bewaarStand(this.stand);
+        }
+        return gelukt;
+      },
+      opKlaar: () => {
+        sluitScherm();
+        this.modus = 'spelen';
+        this.besturing.aan = true;
+        this.hud.zichtbaar(true);
+        this.camYaw = this.kijkHoek + Math.PI;
+        daarna?.();
+      },
+    });
+  }
+
+  /** Nieuwe kleding vrijgespeeld? Dan een feestje en een melding. */
+  private meldNieuweKleding(voor: Set<string>): string[] {
+    const nu = beschikbareItems(this.stand);
+    const nieuw = KAST.filter((i) => nu.has(i.id) && !voor.has(i.id)).map((i) => i.naam);
+    if (nieuw.length) {
+      const p = this.speler.pos;
+      this.effecten.vuurwerk(new THREE.Vector3(p.x, p.y + 6, p.z));
+      this.geluid.fanfare();
+      const tekst = `Nieuw in je kledingkast: ${nieuw.join(' en ')}!`;
+      window.setTimeout(() => {
+        this.hud.toonBanner(`👕 ${veilig(tekst)}`, () => spreek(tekst), { goed: true, duur: 5000 });
+        if (this.modus === 'spelen') spreek(tekst);
+      }, 1800);
+    }
+    return nieuw;
   }
 
   private updateTitelCamera(dt: number) {
@@ -362,10 +583,17 @@ export class Spel {
       this.springBuffer = 0;
       s.opGrond = false;
       this.geluid.spring();
+      this.effecten.stof(new THREE.Vector3(s.pos.x, s.pos.y + 0.1, s.pos.z), 0.5);
     }
     this.springBuffer -= dt;
     s.snelheid.y = Math.max(s.snelheid.y - ZWAARTEKRACHT * dt, -32);
+    const valSnelheid = s.snelheid.y;
+    const wasOpGrond = s.opGrond;
     this.fysica.beweeg(s, dt);
+    // Stofwolkje bij een stevige landing
+    if (!wasOpGrond && s.opGrond && valSnelheid < -9 && s.grond?.soort !== 'hooi') {
+      this.effecten.stof(new THREE.Vector3(s.pos.x, s.pos.y + 0.1, s.pos.z), Math.min(1.6, -valSnelheid / 14));
+    }
     this.wasOpGrond = s.opGrond;
 
     if (Math.hypot(rx, rz) > 0.1) {
@@ -376,7 +604,7 @@ export class Spel {
     }
 
     // Een tijdje niks doen? Dan gaat Ninte dansen (een geheimpje).
-    const stil = Math.hypot(b.x, b.y) === 0 && !wilSpringen && s.opGrond && !this.obby.bevat(s.pos.x);
+    const stil = Math.hypot(b.x, b.y) === 0 && !wilSpringen && s.opGrond && !this.huidigeObby();
     this.stilTijd = stil ? this.stilTijd + dt : 0;
     const dansen = this.stilTijd > DANS_NA;
     if (dansen && !this.dansen) this.vindGeheim('dansje', 'Dansfeest!', `${this.stand.speler} gaat dansen!`);
@@ -397,7 +625,7 @@ export class Spel {
     }
 
     // Plekken onthouden waar je stond, om na een plons daar terug te komen.
-    if (s.opGrond && !this.obby.bevat(s.pos.x)) {
+    if (s.opGrond && !this.huidigeObby()) {
       this.grondTimer -= dt;
       if (this.grondTimer <= 0) {
         this.grondTimer = 0.25;
@@ -416,8 +644,9 @@ export class Spel {
     if (this.terugTimer >= 0) {
       this.terugTimer -= dt;
       if (this.terugTimer < 0) {
-        if (this.obby.bevat(s.pos.x)) {
-          this.zetSpeler(this.obby.checkpoint, OBBY_RICHTING);
+        const obby = this.huidigeObby()?.obby;
+        if (obby) {
+          this.zetSpeler(obby.checkpoint, OBBY_RICHTING);
         } else {
           const veilig = this.grondSporen[Math.max(0, this.grondSporen.length - 4)] ?? STARTPUNT;
           this.grondSporen = [];
@@ -481,7 +710,7 @@ export class Spel {
 
   private updateDieren(dt: number) {
     const s = this.speler.pos;
-    const inObby = this.obby.bevat(s.x);
+    const inObby = this.huidigeObby()?.obby;
     // De dieren lopen naast de speler (niet ervoor, dan zie je niets).
     const zij = new THREE.Vector3(Math.cos(this.kijkHoek), 0, -Math.sin(this.kijkHoek));
     const voor = new THREE.Vector3(Math.sin(this.kijkHoek), 0, Math.cos(this.kijkHoek));
@@ -494,13 +723,13 @@ export class Spel {
     };
     if (this.pony) {
       const doel = inObby
-        ? WACHTPLEK_PONY.clone()
+        ? inObby.wachtplek(0)
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, -2.0).addScaledVector(voor, -0.4));
       this.pony.update(dt, doel, this.dansen);
     }
     if (this.puppy) {
       const doel = inObby
-        ? WACHTPLEK_PUPPY.clone()
+        ? inObby.wachtplek(1)
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, 1.5).addScaledVector(voor, 0.2));
       this.puppy.update(dt, doel, this.dansen);
     }
@@ -544,6 +773,7 @@ export class Spel {
   /** Een geheim gevonden: melding, geluidje en in het geheimenboek. */
   private vindGeheim(id: string, titel: string, tekst: string) {
     if (this.stand.geheimen.includes(id)) return;
+    const kledingVoor = beschikbareItems(this.stand);
     this.stand.geheimen.push(id);
     bewaarStand(this.stand);
     this.geluid.magie();
@@ -551,6 +781,7 @@ export class Spel {
     this.effecten.goudregen(new THREE.Vector3(p.x, p.y + 2.5, p.z));
     this.hud.toonBanner(`⭐ <b>Geheim gevonden: ${veilig(titel)}</b><br>${veilig(tekst)}`, () => spreek(tekst), { goed: true, duur: 5000 });
     spreek(tekst);
+    this.meldNieuweKleding(kledingVoor);
   }
 
   private verwerkGeheimen(gebeurtenissen: GeheimGebeurtenis[]) {
@@ -574,7 +805,7 @@ export class Spel {
           const n = this.stand.goudenHoefijzers.length;
           this.effecten.goudregen(g.pos);
           this.geluid.magie();
-          this.geefHoefijzers(5);
+          this.geefHoefijzers(5, g.pos);
           if (n >= AANTAL_GOUDEN) {
             this.pony?.maakMagisch();
             const naam = this.stand.pony?.naam ?? 'Je pony';
@@ -596,7 +827,7 @@ export class Spel {
 
   private openSlot() {
     this.pauzeer();
-    spreek('Een schatkist! Weet jij het geheime wachtwoord?');
+    spreek('Een schatkist! Weet jij het geheime wachtwoord?', 'schatkist');
     wachtwoordScherm(
       (tekst) => {
         if (tekst.trim().toLowerCase() !== WACHTWOORD) {
@@ -618,9 +849,13 @@ export class Spel {
     );
   }
 
-  private geefHoefijzers(n: number) {
+  private geefHoefijzers(n: number, van?: THREE.Vector3) {
     this.stand.hoefijzers += n;
-    this.ronde.verdiend += n;
+    const o = this.huidigeObby();
+    if (o) o.ronde.verdiend += n;
+    // Hoefijzertjes vliegen vanaf de plek (of vanaf Ninte) naar de teller.
+    const p = (van ?? new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 2, this.speler.pos.z)).clone().project(this.camera);
+    this.hud.vliegHoefijzers(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight, n);
     this.hud.zetHoefijzers(this.stand.hoefijzers, true);
     this.hud.meld(`+${n}`);
     this.geluid.munt();
@@ -628,44 +863,57 @@ export class Spel {
   }
 
   private spreekPoort(p: Poort) {
-    if (p.kaart) spreek(voorleesTekst(p.kaart));
+    if (p.vraag) spreek(p.vraag.voorlezen, p.vraag.opname);
   }
 
-  private verwerk(gebeurtenissen: ObbyGebeurtenis[]) {
+  /** De herhaalbakjes voor spelling of rekenen. */
+  private stats(v: Vraag) {
+    return v.soort === 'rekenen' ? this.stand.sommen : this.stand.woorden;
+  }
+
+  private verwerk(o: ObbyStaat, gebeurtenissen: ObbyGebeurtenis[]) {
     for (const g of gebeurtenissen) {
       switch (g.soort) {
         case 'start':
-          if (this.obbyKlaar) this.nieuweRonde();
-          if (!this.obbyUitgelegd) {
-            this.obbyUitgelegd = true;
-            const tekst = 'Deuren-obby! Loop steeds door de deur met de goede spelling.';
-            this.hud.toonBanner(tekst, () => spreek(tekst), { duur: 6000 });
-            spreek(tekst);
+          if (o.klaar) this.nieuweRonde(o);
+          if (!o.uitgelegd) {
+            o.uitgelegd = true;
+            const reken = o.obby.thema.id === 'rekenen';
+            const tekst = reken
+              ? 'Reken-obby! Loop steeds door de deur met het goede antwoord.'
+              : 'Deuren-obby! Loop steeds door de deur met de goede spelling.';
+            const sleutel = reken ? 'uitleg-reken' : 'uitleg-deuren';
+            this.hud.toonBanner(tekst, () => spreek(tekst, sleutel), { duur: 6000 });
+            spreek(tekst, sleutel);
           }
           break;
         case 'nader': {
           const p = g.poort;
-          this.hud.toonBanner(veilig(zinMetGat(p.kaart!)).replace('___', '<span class="gat"></span>'), () => this.spreekPoort(p));
+          this.hud.toonBanner(veilig(p.vraag!.tekst).replace('___', '<span class="gat"></span>'), () => this.spreekPoort(p));
           this.spreekPoort(p);
           break;
         }
         case 'goed': {
           const p = g.poort;
-          const kaart = p.kaart!;
+          const vraag = p.vraag!;
           if (g.eersteKeer) {
-            this.stand.woorden[kaart.woord] = verwerkAntwoord(this.stand.woorden[kaart.woord], true, Date.now());
-            this.ronde.goedInEenKeer++;
+            const stats = this.stats(vraag);
+            stats[vraag.sleutel] = verwerkAntwoord(stats[vraag.sleutel], true, Date.now());
+            o.ronde.goedInEenKeer++;
           }
           this.geluid.goed();
+          this.opnames.speel('goed-zo'); // alleen als je het zelf hebt ingesproken
           this.effecten.confetti(new THREE.Vector3(p.na.x - 1, p.na.y + 2, this.speler.pos.z));
-          this.hud.toonBanner(`Goed zo! <b>${veilig(kaart.woord)}</b> ✔️`, null, { goed: true, duur: 1800 });
+          this.effecten.ring(p.na.clone(), '#35c46a', 5);
+          this.hud.toonBanner(`Goed zo! <b>${veilig(vraag.goed)}</b> ✔️`, null, { goed: true, duur: 1800 });
           this.geefHoefijzers(g.eersteKeer ? 3 : 1);
           break;
         }
         case 'fout': {
-          const kaart = g.poort.kaart!;
+          const vraag = g.poort.vraag!;
           if (g.poort.pogingen === 1) {
-            this.stand.woorden[kaart.woord] = verwerkAntwoord(this.stand.woorden[kaart.woord], false, Date.now());
+            const stats = this.stats(vraag);
+            stats[vraag.sleutel] = verwerkAntwoord(stats[vraag.sleutel], false, Date.now());
             bewaarStand(this.stand);
           }
           this.geluid.fout();
@@ -674,50 +922,61 @@ export class Spel {
         }
         case 'inHooi': {
           const p = g.poort;
-          const kaart = p.kaart!;
+          const vraag = p.vraag!;
           this.geluid.plof();
           this.effecten.hooi(new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 0.3, this.speler.pos.z));
           window.setTimeout(() => {
             this.pauzeer();
-            const tip = tipVoor(kaart);
-            tipKaart(kaart.woord, p.fout, tip, () => spreek(`${kaart.woord}. ${tip}`), () => {
+            const uitleg = `${vraag.goed}. ${vraag.tip}`;
+            tipKaart(vraag.tipTitel, vraag.goed, vraag.fout, vraag.tip, () => spreek(uitleg), () => {
               this.geluid.klik();
-              this.obby.herstelPoort(p);
+              o.obby.herstelPoort(p);
               this.zetSpeler(p.voor, OBBY_RICHTING);
               this.hervat();
             });
-            spreek(`${kaart.woord}. ${tip}`);
+            spreek(uitleg);
           }, 450);
           break;
         }
         case 'finish': {
-          this.obbyKlaar = true;
+          o.klaar = true;
           this.stand.obbyGehaald++;
           this.geluid.fanfare();
-          this.effecten.confetti(this.obby.bekerPositie);
+          this.effecten.confetti(o.obby.bekerPositie);
+          this.effecten.vuurwerk(o.obby.bekerPositie.clone().add(new THREE.Vector3(0, 5, 0)));
           this.hud.verbergBanner();
           this.geefHoefijzers(10);
-          const { goedInEenKeer, verdiend } = this.ronde;
+          const { goedInEenKeer, verdiend } = o.ronde;
+          const kledingVoor = beschikbareItems(this.stand);
+          if (!this.stand.gehaald.includes(o.obby.thema.id)) this.stand.gehaald.push(o.obby.thema.id);
+          if (goedInEenKeer === AANTAL_POORTEN) this.stand.drieSterren = true;
+          bewaarStand(this.stand);
+          const nieuweKleding = KAST.filter((i) => beschikbareItems(this.stand).has(i.id) && !kledingVoor.has(i.id)).map((i) => i.naam);
           window.setTimeout(() => {
             this.pauzeer();
-            spreek('Obby gehaald! Goed gedaan!');
+            spreek('Obby gehaald! Goed gedaan!', 'obby-gehaald');
             finishKaart(
               goedInEenKeer,
               AANTAL_POORTEN,
               verdiend,
               () => {
-                this.nieuweRonde();
-                this.zetSpeler(this.obby.startPunt, OBBY_RICHTING);
+                this.nieuweRonde(o);
+                this.zetSpeler(o.obby.startPunt, OBBY_RICHTING);
                 this.hervat();
               },
               () => {
-                this.nieuweRonde();
+                this.nieuweRonde(o);
                 this.zetSpeler(STARTPUNT, Math.PI);
                 this.hervat();
               },
               () => {
                 this.geluid.klik();
                 this.hervat();
+              },
+              nieuweKleding,
+              () => {
+                this.hervat();
+                this.openKast();
               },
             );
           }, 1400);
@@ -731,9 +990,9 @@ export class Spel {
     }
   }
 
-  private nieuweRonde() {
-    this.obbyKlaar = false;
-    this.ronde = { goedInEenKeer: 0, verdiend: 0 };
-    this.obby.startRonde(this.kiesRondeWoorden());
+  private nieuweRonde(o: ObbyStaat) {
+    o.klaar = false;
+    o.ronde = { goedInEenKeer: 0, verdiend: 0 };
+    o.obby.startRonde(this.nieuweVragen(o.obby));
   }
 }

@@ -649,3 +649,303 @@ button {
 .geheim.gevonden {
   background: #fff6db;
 }
+
+/* Kledingkast */
+.scherm.kast {
+  background: transparent;
+  place-items: stretch end;
+  padding: 0;
+  pointer-events: none;
+}
+
+.kast-paneel {
+  pointer-events: auto;
+  width: min(460px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--paneel);
+  border-radius: 28px 0 0 28px;
+  box-shadow: -8px 0 30px rgba(43, 35, 64, 0.25);
+  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) 20px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  animation: inschuiven 0.3s ease;
+}
+
+@keyframes inschuiven {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+@media (orientation: portrait) {
+  .scherm.kast {
+    place-items: end stretch;
+  }
+  .kast-paneel {
+    width: 100%;
+    height: 56%;
+    border-radius: 28px 28px 0 0;
+  }
+}
+
+.kast-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kast-kop h2 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.kast-geld {
+  font-weight: 800;
+  color: #b77e00;
+  white-space: nowrap;
+}
+
+.kast-paneel h3 {
+  margin: 6px 0 4px;
+  font-size: 19px;
+}
+
+.kast-paneel .knop {
+  justify-self: center;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tab {
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #f1eefb;
+  color: var(--inkt);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.tab.actief {
+  background: var(--paars);
+  color: #fff;
+}
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 8px;
+}
+
+.item {
+  min-height: 64px;
+  padding: 8px;
+  border: 3px solid #e4e0f0;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--inkt);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.item small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b6480;
+}
+
+.item.aan {
+  border-color: var(--paars);
+  background: #f1ecff;
+}
+
+.item.slot {
+  opacity: 0.65;
+}
+
+.item.koop {
+  border-color: #ffc933;
+  background: #fff6db;
+}
+
+.stalen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.staal {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 3px #d6d0ea;
+}
+
+.staal.aan {
+  box-shadow: 0 0 0 4px var(--paars);
+}
+
+.kast-paneel .hint {
+  margin: 0;
+  min-height: 22px;
+  font-size: 17px;
+}
+
+/* Hoefijzertjes die naar de teller vliegen */
+.vlieg-hoefijzer {
+  position: fixed;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  pointer-events: none;
+  z-index: 50;
+  transition: transform 0.7s cubic-bezier(0.5, -0.3, 0.7, 1), opacity 0.7s ease-in;
+  filter: drop-shadow(0 2px 3px rgba(43, 35, 64, 0.35));
+}
+
+.vlieg-hoefijzer svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlieg-hoefijzer {
+    display: none;
+  }
+}
+
+/* Muziek in de instellingen */
+.nu-speelt {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--paars-donker);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muzieklijst summary {
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.muzieklijst h4 {
+  margin: 8px 0 4px;
+  font-size: 16px;
+  color: #6b6480;
+}
+
+.nummer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #f4f2fa;
+  margin-bottom: 6px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.wis {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #ffe1e1;
+  font-size: 20px;
+}
+
+/* Stem inspreken */
+.kaart.inspreken {
+  text-align: left;
+  width: min(640px, 100%);
+}
+
+.kaart.inspreken h2,
+.kaart.inspreken .voortgang {
+  text-align: center;
+}
+
+.kaart.inspreken .knop {
+  display: flex;
+  margin: 14px auto 0;
+}
+
+.zin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f4f2fa;
+  margin-bottom: 8px;
+}
+
+.zin p {
+  margin: 0;
+  font-size: 17px;
+  flex: 1;
+}
+
+.zin.klaar {
+  background: #e5f9ec;
+}
+
+.zin.opnemend {
+  background: #ffe1e1;
+  animation: knipper 1s ease-in-out infinite;
+}
+
+@keyframes knipper {
+  50% {
+    background: #ffc2c2;
+  }
+}
+
+.zin-knoppen {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.opname-knop {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--inkt);
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #d6d0ea;
+}
+
+.opname-knop.stop {
+  background: #d62839;
+  color: #fff;
+  box-shadow: 0 3px 0 #9b1c29;
+}
+
+.opname-knop:disabled {
+  opacity: 0.45;
+}

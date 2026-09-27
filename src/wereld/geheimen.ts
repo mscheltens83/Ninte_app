@@ -97,6 +97,11 @@ export class Geheimen {
     this.hoefijzers.push({ id, mesh, basisY: y, gevonden: false });
   }
 
+  /** Waar nog niet gevonden gouden hoefijzers liggen (voor de glinsters). */
+  zichtbareHoefijzers(): THREE.Vector3[] {
+    return this.hoefijzers.filter((h) => !h.gevonden).map((h) => h.mesh.position);
+  }
+
   /** Al gevonden hoefijzers niet meer laten zien. */
   verberg(ids: string[]) {
     for (const h of this.hoefijzers) {

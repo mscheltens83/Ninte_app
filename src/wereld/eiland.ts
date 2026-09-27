@@ -196,7 +196,9 @@ const VRIJE_ZONES: [number, number, number, number][] = [
   [-35, -26, -9, -3], // trampoline achter de stal
   [-35, -30, -28, -20], // begin van de stapstenen
   [0, 35, 3, 12], // pad naar de obby
-  [24, 35, -8, 10], // start van de obby
+  [24, 35, -8, 10], // start van de Deuren-obby
+  [16, 23, -21, 10], // pad naar de Reken-obby
+  [20, 35, -24, -12], // start van de Reken-obby
   [-8, 8, -34, -24], // dorp (binnenkort)
 ];
 
@@ -229,11 +231,15 @@ export function bouwEiland(scene: THREE.Scene, f: Fysica): Eiland {
   groep.add(blokOp(30, 0.03, 3, pad, 15, 0, 7.5, false));
   groep.add(blokOp(3, 0.03, 12, pad, -6, 0, 0, false));
   groep.add(blokOp(9, 0.03, 3, pad, -10.5, 0, -6, false));
+  groep.add(blokOp(3, 0.03, 24, pad, 19.5, 0, -5.5, false)); // naar de Reken-obby
+  groep.add(blokOp(10, 0.03, 3, pad, 25.5, 0, -18, false));
 
   // Borden
   // Op de achterkant staat het geheime wachtwoord voor de schatkist.
   bordOpPalen(groep, f, 'Welkom in\nNintes Wereld!', 0, 3, 0, 5, 2, `Psst... het geheime\nwachtwoord is:\n${WACHTWOORD}`);
-  bordOpPalen(groep, f, 'Deuren-obby  →', 5.5, 4.5, 0, 4.2, 1.1);
+  bordOpPalen(groep, f, "Obby's  →", 5.5, 4.5, 0, 4.2, 1.1);
+  // Wegwijzer op de splitsing (kijkt naar wie van het startpunt komt)
+  bordOpPalen(groep, f, '↑  Deuren-obby\n←  Reken-obby', 16.5, 11, -Math.PI / 2, 4.4, 1.8);
   bordOpPalen(groep, f, '←  Stal', -5, 4.5, 0, 3, 1.1);
 
   const stalBord = stal(groep, f);

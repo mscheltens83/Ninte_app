@@ -71,7 +71,19 @@ export function kanVoorlezen(): boolean {
   return beschikbaar();
 }
 
-export function spreek(tekst: string) {
+/** Speelt een ingesproken opname af; geeft false als die er niet is. */
+let opnameSpeler: ((sleutel: string) => boolean) | null = null;
+
+export function stelOpnameSpelerIn(speler: (sleutel: string) => boolean) {
+  opnameSpeler = speler;
+}
+
+/** Lees voor. Is er een ingesproken opname voor `sleutel`, dan klinkt die. */
+export function spreek(tekst: string, sleutel?: string) {
+  if (sleutel && opnameSpeler?.(sleutel)) {
+    if (beschikbaar()) window.speechSynthesis.cancel();
+    return;
+  }
   if (!beschikbaar()) return;
   try {
     const synth = window.speechSynthesis;

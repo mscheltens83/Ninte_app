@@ -1,11 +1,11 @@
-// De Deuren-obby: een hindernisbaan met poorten. Bij elke poort staan twee
-// deuren met een woord. De goede spelling gaat open; bij de foute gaat het
-// valluik open en plof je zachtjes in het hooi.
+// Een deuren-obby: een hindernisbaan met poorten. Bij elke poort staan twee
+// deuren met een antwoord (een woord of een getal). Het goede antwoord gaat
+// open; bij het foute gaat het valluik open en plof je zachtjes in het hooi.
+// De Deuren-obby (spelling) en de Reken-obby gebruiken allebei deze klasse.
 
 import * as THREE from 'three';
 import { Fysica, botserUitBlok, overlapt, type Botser, type Lichaam } from '../spel/fysica';
-import type { Woordkaart } from '../leren/woorden';
-import { maakFouteVariant, zinMetGat } from '../leren/spelling';
+import type { Vraag } from '../leren/vragen';
 import { blok, blokOp, dynamisch, tekstBord, voegStatischSamen, type Tekstbord } from './bouwstenen';
 import { beker, hoefijzer } from './versiering';
 
@@ -13,7 +13,33 @@ export const AANTAL_POORTEN = 6;
 const BREEDTE = 10; // breedte van een poort (z-richting)
 const GAT = 2; // afstand tussen platforms
 const HOOI_TOP = 0.1; // bovenkant van het hooi onder de valluiken
-const PLATFORM_KLEUREN = ['#ff6f91', '#ffc75f', '#4fc3f7', '#9ccc65', '#ba68c8', '#ff9f68'];
+export interface ObbyThema {
+  id: 'spelling' | 'rekenen';
+  naam: string;
+  kleur: string;
+  platforms: string[];
+  deuren: [string, string];
+  /** Het vraagbord: lichthout met donkere letters, of een schoolbord. */
+  bord: { achtergrond: string; kleur: string; rand: string };
+}
+
+export const SPELLING_THEMA: ObbyThema = {
+  id: 'spelling',
+  naam: 'Deuren-obby',
+  kleur: '#ff6f91',
+  platforms: ['#ff6f91', '#ffc75f', '#4fc3f7', '#9ccc65', '#ba68c8', '#ff9f68'],
+  deuren: ['#4a90e2', '#f5a623'],
+  bord: { achtergrond: '#fff8e7', kleur: '#2b2340', rand: '#8a5a2b' },
+};
+
+export const REKEN_THEMA: ObbyThema = {
+  id: 'rekenen',
+  naam: 'Reken-obby',
+  kleur: '#3a86ff',
+  platforms: ['#3a86ff', '#2ec4b6', '#8ac926', '#ffca3a', '#4cc9f0', '#80ed99'],
+  deuren: ['#35c46a', '#a35be0'],
+  bord: { achtergrond: '#2f5d50', kleur: '#ffffff', rand: '#8a5a2b' },
+};
 const glas = new THREE.MeshStandardMaterial({ color: '#bfe9ff', transparent: true, opacity: 0.28, roughness: 0.1, depthWrite: false });
 
 interface Deur {
@@ -35,8 +61,7 @@ interface Luik {
 
 export interface Poort {
   index: number;
-  kaart: Woordkaart | null;
-  fout: string;
+  vraag: Vraag | null;
   goedLinks: boolean;
   status: 'wacht' | 'open' | 'gevallen';
   pogingen: number;
@@ -79,9 +104,12 @@ export class DeurenObby {
   private tijd = 0;
   readonly beginX: number;
 
-  constructor(scene: THREE.Scene, private f: Fysica, oorsprong: THREE.Vector3) {
+  readonly zc: number;
+
+  constructor(scene: THREE.Scene, private f: Fysica, oorsprong: THREE.Vector3, readonly thema: ObbyThema = SPELLING_THEMA) {
     scene.add(this.groep);
     const zc = oorsprong.z;
+    this.zc = zc;
     this.beginX = oorsprong.x - 3;
 
     // Startplatform met poortje en bord
@@ -91,8 +119,8 @@ export class DeurenObby {
     this.checkpoint = this.startPunt.clone();
     this.startZone = botserUitBlok(sx, 1.5, zc, 4, 2, 5);
     for (const dz of [-2.4, 2.4]) this.vast(0.5, 4.2, 0.5, '#ffffff', sx - 1.5, 0.5, zc + dz);
-    this.vast(0.6, 0.6, 5.4, '#ff6f91', sx - 1.5, 4.7, zc);
-    const startBord = tekstBord('Deuren-obby', 4.4, 1.0, { breedte: 640, achtergrond: '#ffffff', rand: '#ff6f91' });
+    this.vast(0.6, 0.6, 5.4, thema.kleur, sx - 1.5, 4.7, zc);
+    const startBord = tekstBord(thema.naam, 4.4, 1.0, { breedte: 640, achtergrond: '#ffffff', rand: thema.kleur });
     startBord.mesh.position.set(sx - 1.84, 4.35, zc);
     startBord.mesh.rotation.y = -Math.PI / 2;
     this.groep.add(startBord.mesh);
@@ -109,7 +137,7 @@ export class DeurenObby {
       for (const [j, dz] of [[0, zig], [1, -zig]] as const) {
         x += GAT;
         y += 0.4;
-        this.vast(maat, 0.6, maat, PLATFORM_KLEUREN[(i * 2 + j) % PLATFORM_KLEUREN.length], x + maat / 2, y - 0.6, zc + dz);
+        this.vast(maat, 0.6, maat, thema.platforms[(i * 2 + j) % thema.platforms.length], x + maat / 2, y - 0.6, zc + dz);
         x += maat;
       }
       x += GAT;
@@ -192,7 +220,7 @@ export class DeurenObby {
     this.vast(0.4, 0.6, 2.2, muur, mx, gy + 3.0, zc - 2.5);
     this.vast(0.4, 0.6, 2.2, muur, mx, gy + 3.0, zc + 2.5);
 
-    const deurKleuren = ['#4a90e2', '#f5a623'];
+    const deurKleuren = this.thema.deuren;
     const deuren = ([-1, 1] as const).map((kant, i) => {
       const dz = zc + kant * 2.5;
       const materiaal = new THREE.MeshStandardMaterial({ color: deurKleuren[i], roughness: 0.6 });
@@ -214,7 +242,7 @@ export class DeurenObby {
     }) as [Deur, Deur];
 
     // Bord met de zin boven de muur
-    const vraagBord = tekstBord('...', 9.6, 1.4, { breedte: 1024, achtergrond: '#fff8e7', rand: '#8a5a2b' });
+    const vraagBord = tekstBord('...', 9.6, 1.4, { breedte: 1024, ...this.thema.bord });
     vraagBord.mesh.position.set(mx - 0.22, gy + H + 0.75, zc);
     vraagBord.mesh.rotation.y = -Math.PI / 2;
     this.groep.add(vraagBord.mesh);
@@ -238,8 +266,7 @@ export class DeurenObby {
 
     return {
       index,
-      kaart: null,
-      fout: '',
+      vraag: null,
       goedLinks: true,
       status: 'wacht',
       pogingen: 0,
@@ -256,8 +283,8 @@ export class DeurenObby {
     };
   }
 
-  /** Nieuwe ronde: alle poorten dicht en nieuwe woorden. */
-  startRonde(kaarten: Woordkaart[]) {
+  /** Nieuwe ronde: alle poorten dicht en nieuwe vragen. */
+  startRonde(vragen: Vraag[]) {
     this.gefinisht = false;
     this.checkpoint = this.startPunt.clone();
     this.poorten.forEach((p, i) => {
@@ -274,20 +301,19 @@ export class DeurenObby {
         l.doelHoek = 0;
         l.botser.actief = true;
       }
-      p.kaart = kaarten[i % kaarten.length] ?? null;
-      if (p.kaart) {
-        p.fout = maakFouteVariant(p.kaart);
-        p.vraagBord.zetTekst(zinMetGat(p.kaart));
+      p.vraag = vragen[i % vragen.length] ?? null;
+      if (p.vraag) {
+        p.vraagBord.zetTekst(p.vraag.tekst.replace('___', '?'));
         this.husselDeuren(p);
       }
     });
   }
 
   private husselDeuren(p: Poort) {
-    if (!p.kaart) return;
+    if (!p.vraag) return;
     p.goedLinks = Math.random() < 0.5;
-    p.deuren[0].bord.zetTekst(p.goedLinks ? p.kaart.woord : p.fout);
-    p.deuren[1].bord.zetTekst(p.goedLinks ? p.fout : p.kaart.woord);
+    p.deuren[0].bord.zetTekst(p.goedLinks ? p.vraag.goed : p.vraag.fout);
+    p.deuren[1].bord.zetTekst(p.goedLinks ? p.vraag.fout : p.vraag.goed);
   }
 
   /** Na een fout: valluik dicht, deuren opnieuw gehusseld, nog een kans. */
@@ -303,9 +329,14 @@ export class DeurenObby {
     this.checkpoint = p.voor.clone();
   }
 
-  /** Is de speler op (of boven) het parcours? Dan wachten de dieren bij de start. */
-  bevat(x: number): boolean {
-    return x > this.beginX + 1.5;
+  /** Is de speler op (of boven) dit parcours? Dan wachten de dieren bij de start. */
+  bevat(x: number, z: number): boolean {
+    return x > this.beginX + 1.5 && Math.abs(z - this.zc) < 12;
+  }
+
+  /** Waar de dieren wachten terwijl je de obby doet. */
+  wachtplek(i: number): THREE.Vector3 {
+    return new THREE.Vector3(this.beginX - 1.5, 0, this.zc + (i === 0 ? -3 : 3));
   }
 
   update(dt: number, speler: Lichaam): ObbyGebeurtenis[] {
@@ -320,7 +351,7 @@ export class DeurenObby {
     this.opStart = opStart;
 
     for (const p of this.poorten) {
-      if (!p.kaart) continue;
+      if (!p.vraag) continue;
       if (p.status === 'wacht') {
         if (!p.aangekondigd && overlapt(p.naderZone, speler)) {
           p.aangekondigd = true;

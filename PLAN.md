@@ -188,11 +188,18 @@ tests/
 - ✅ 9 easter eggs met een geheimenboek (⭐): gouden hoefijzers en een eenhoorn, trampoline, palmeilandje, wolkeneiland, schatkist met wachtwoord (spellen!), dansfeest, zoomies en steigeren. Daarnaast seizoensverrassingen.
 - Onderzocht: open-source neurale stemmen (Piper, Chatterbox) als vervanging voor de iPad-stem. Die spraken sommige woorden verkeerd uit (bijvoorbeeld *veulen* als *vullen*), dus voor nu blijft de verbeterde iPad-stem de beste keuze. Wat nog beter werkt, is een echte stem: zie *inspreken* in fase 2.
 
+### Ronde 3 ✅ gebouwd
+- ✅ **Rekenen**: de Reken-obby met tafels, deelsommen, plus en min tot 1000 en keersommen met een nul, met trucjes en herhaalbakjes.
+- ✅ **Karakter veranderen**: een kledingkast met kapsels, kleuren, hoeden en extra's. Vooraf maakt ze haar poppetje; na opdrachten en geheimen speelt ze nieuwe kleding vrij, en met hoefijzers kan ze kleding kopen.
+- ✅ **Zelf inspreken**: 62 zinnen (welkom, aanmoediging en 53 dictee-zinnen), die de computerstem vervangen.
+- ✅ **Meer muziek**: afspeellijsten per plek; nieuwe MP3's komen er vanzelf bij, of je voegt ze op de iPad toe.
+- ✅ **Meer effecten**: vuurwerk, stofwolkjes, vlinders, vissen, glinsters, vliegende hoefijzers en een toverwolk.
+
 ### Fase 2: schrijven en dictee
 - **Dictee-springparcours** (paard rijden + woorden typen).
 - **Verhalenboek + Speurneus** (vrij schrijven, daarna zelf foutjes zoeken).
 - Herhaalbakjes en foutanalyse.
-- Ouder-modus: weekwoorden invoeren en inspreken.
+- Ouder-modus: weekwoorden invoeren (inspreken kan al, zie ronde 3).
 
 ### Fase 3: de wereld groter maken
 - Winkel, avatar-kleding, stal en kamer inrichten.

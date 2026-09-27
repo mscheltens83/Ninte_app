@@ -1,5 +1,6 @@
 // Voortgang bewaren op het apparaat zelf. Er gaat niets naar internet.
 
+import { STANDAARD_UITERLIJK, type Uiterlijk } from '../figuren/uiterlijk';
 import type { WoordStats } from '../leren/herhaalbakjes';
 
 export interface DierKeuze {
@@ -14,6 +15,8 @@ export interface Spelstand {
   puppy: DierKeuze | null;
   hoefijzers: number;
   woorden: WoordStats;
+  /** Herhaalbakjes voor de rekensommen (tafels en deelsommen). */
+  sommen: WoordStats;
   obbyGehaald: number;
   geluidAan: boolean;
   muziekAan: boolean;
@@ -25,6 +28,14 @@ export interface Spelstand {
   geheimen: string[];
   /** Welke gouden hoefijzers al gevonden zijn. */
   goudenHoefijzers: string[];
+  /** Hoe het poppetje eruitziet. */
+  uiterlijk: Uiterlijk;
+  /** Gekochte spullen uit de kledingkast. */
+  bezit: string[];
+  /** Welke obby's al een keer gehaald zijn ('spelling', 'rekenen'). */
+  gehaald: string[];
+  /** Ooit een obby gehaald met alle deuren in één keer goed? */
+  drieSterren: boolean;
 }
 
 const SLEUTEL = 'nintes-wereld';
@@ -37,6 +48,7 @@ export function nieuweStand(): Spelstand {
     puppy: null,
     hoefijzers: 0,
     woorden: {},
+    sommen: {},
     obbyGehaald: 0,
     geluidAan: true,
     muziekAan: true,
@@ -45,6 +57,10 @@ export function nieuweStand(): Spelstand {
     uitlegGezien: false,
     geheimen: [],
     goudenHoefijzers: [],
+    uiterlijk: { ...STANDAARD_UITERLIJK },
+    bezit: [],
+    gehaald: [],
+    drieSterren: false,
   };
 }
 
@@ -54,7 +70,8 @@ export function laadStand(opslag: Pick<Storage, 'getItem'> | null = veiligeOpsla
     if (!tekst) return nieuweStand();
     const data = JSON.parse(tekst) as Partial<Spelstand>;
     if (data.versie !== 1) return nieuweStand();
-    return { ...nieuweStand(), ...data };
+    const basis = nieuweStand();
+    return { ...basis, ...data, uiterlijk: { ...basis.uiterlijk, ...data.uiterlijk } };
   } catch {
     return nieuweStand();
   }

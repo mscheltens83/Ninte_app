@@ -1,6 +1,9 @@
 // Schermen die over het spel heen komen: titel, dieren kiezen, tip, finish, uitleg.
 
 import type { Vacht } from '../figuren/dieren';
+import { PLEKKEN, type Plek } from '../geluid/muziek';
+import type { InspreekZin } from '../leren/inspreken';
+import { KAST, KLEUREN, itemStatus, slotTekst, type KastItem, type KastStand, type Uiterlijk } from '../figuren/uiterlijk';
 import { veilig } from './hud';
 
 const houder = () => document.getElementById('schermen')!;
@@ -112,7 +115,8 @@ export function uitlegScherm(opSluit: () => void, computer: boolean) {
         <div><b class="icoon">🕹️</b>${lopen}</div>
         <div><b class="icoon">⤴️</b>${springen}</div>
         <div><b class="icoon">👀</b>${kijken}</div>
-        <div><b class="icoon">🚪</b>Volg het bordje naar de Deuren-obby. Loop door de deur met de goede spelling!</div>
+        <div><b class="icoon">🚪</b>Volg de bordjes naar de Deuren-obby (spelling) of de Reken-obby (rekenen). Loop door de deur met het goede antwoord!</div>
+        <div><b class="icoon">👕</b>In de kledingkast maak je je poppetje mooi. Speel nieuwe kleding vrij of koop het met hoefijzers.</div>
         <div><b class="icoon">🔊</b>Tik op het luidsprekertje om de zin te laten voorlezen.</div>
         <div><b class="icoon">❤️</b>Tik op je pony of puppy om ze te aaien.</div>
         <div><b class="icoon">⭐</b>Er zijn geheimen verstopt op het eiland. Kun jij ze allemaal vinden?</div>
@@ -124,6 +128,7 @@ export function uitlegScherm(opSluit: () => void, computer: boolean) {
 }
 
 export function tipKaart(
+  titel: string,
   goed: string,
   fout: string,
   tip: string,
@@ -133,7 +138,7 @@ export function tipKaart(
   const s = toon(
     `<div class="kaart">
       <h2>Bijna!</h2>
-      <p>De goede spelling is:</p>
+      <p>${veilig(titel)}</p>
       <p class="woord-groot">${veilig(goed)}</p>
       <p class="woord-fout">${veilig(fout)}</p>
       <p class="tip">${veilig(tip)}</p>
@@ -152,6 +157,8 @@ export function finishKaart(
   opNogEens: () => void,
   opEiland: () => void,
   opBlijf: () => void,
+  nieuweKleding: string[] = [],
+  opKast?: () => void,
 ) {
   const sterren = goedInEenKeer === totaal ? 3 : goedInEenKeer >= totaal - 2 ? 2 : 1;
   const tekst =
@@ -164,6 +171,7 @@ export function finishKaart(
       <p class="sterren">${'⭐'.repeat(sterren)}${'<span style="opacity:.25">⭐</span>'.repeat(3 - sterren)}</p>
       <p>${tekst}</p>
       <p><b>+${verdiend} hoefijzers</b></p>
+      ${nieuweKleding.length ? `<p class="tip">👕 Nieuw in je kledingkast: <b>${veilig(nieuweKleding.join(' en '))}</b>!</p><button class="knop wit" data-kast>👕 Naar de kledingkast</button>` : ''}
       <button class="knop blauw" data-eiland>Terug naar het eiland</button>
       <button class="knop" data-nogeens>Nog een keer</button>
       <p><button class="link-knop" data-blijf>Nog even hier rondkijken</button></p>
@@ -172,6 +180,7 @@ export function finishKaart(
   knop(s, '[data-nogeens]', opNogEens);
   knop(s, '[data-eiland]', opEiland);
   knop(s, '[data-blijf]', opBlijf);
+  if (opKast && nieuweKleding.length) knop(s, '[data-kast]', opKast);
 }
 
 export interface StemOptie {
@@ -179,9 +188,21 @@ export interface StemOptie {
   label: string;
 }
 
+export interface MuziekRegel {
+  id: string;
+  naam: string;
+  plek: Plek;
+  eigen: boolean;
+}
+
 export interface InstellingenOpties {
   geluidAan: boolean;
   muziekAan: boolean;
+  nummers: MuziekRegel[];
+  huidigNummer: string | null;
+  opVolgende(): void;
+  opToevoegen(bestanden: FileList, plek: Plek): void;
+  opVerwijder(id: string): void;
   stemmen: StemOptie[];
   stemNaam: string | null;
   tempo: number;
@@ -189,6 +210,7 @@ export interface InstellingenOpties {
   opMuziek(aan: boolean): void;
   opStem(naam: string | null): void;
   opTempo(tempo: number): void;
+  opInspreken(): void;
   opSluit(): void;
 }
 
@@ -214,7 +236,23 @@ export function instellingenScherm(o: InstellingenOpties) {
       <h2>Instellingen</h2>
       ${schakelaar('geluid', 'Geluidjes', o.geluidAan)}
       ${schakelaar('muziek', 'Muziek', o.muziekAan)}
+      <div class="rij"><span class="nu-speelt">♪ ${veilig(o.huidigNummer ?? '...')}</span><button class="tempo-knop" data-volgende>⏭ Ander nummer</button></div>
+      <details class="muzieklijst">
+        <summary>Alle muziek (${o.nummers.length})</summary>
+        ${PLEKKEN.map(
+          ([plek, naam]) => `<h4>${naam}</h4>${o.nummers
+            .filter((n) => n.plek === plek)
+            .map((n) => `<div class="nummer"><span>${veilig(n.naam)}</span>${n.eigen ? `<button class="wis" data-wis="${veilig(n.id)}" aria-label="Verwijder">🗑</button>` : ''}</div>`)
+            .join('') || '<p class="klein">Nog geen muziek.</p>'}`,
+        ).join('')}
+      </details>
+      <h3>Eigen muziek toevoegen</h3>
+      <p class="klein">Kies een MP3 van de iPad. Waar moet het nummer spelen?</p>
+      <div class="tempo">${PLEKKEN.map(([plek, naam], i) => `<button class="tempo-knop${i === 0 ? ' gekozen' : ''}" data-plek="${plek}">${naam}</button>`).join('')}</div>
+      <button class="knop blauw" data-toevoegen>＋ Muziek kiezen</button>
+      <input type="file" accept="audio/*,.mp3,.m4a" multiple hidden data-bestand />
       <h3>Voorleesstem</h3>
+      <button class="knop wit" data-inspreken>🎙️ Zelf de stem inspreken</button>
       <div class="stemmen">${stemmen}</div>
       <div class="rij"><span>Tempo</span><div class="tempo">${TEMPO_KEUZES.map(
         ([naam, t]) => `<button class="tempo-knop${Math.abs(o.tempo - t) < 0.01 ? ' gekozen' : ''}" data-tempo="${t}">${naam}</button>`,
@@ -222,7 +260,7 @@ export function instellingenScherm(o: InstellingenOpties) {
       <p class="tip">Klinkt de stem als een robot? Download op de iPad een mooiere stem:
         <b>Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands</b>.
         Kies een stem met <b>(Verbeterd)</b> of <b>(Premium)</b> achter de naam en start het spel opnieuw.</p>
-      <p class="klein">Muziek: "Carefree", "Monkeys Spinning Monkeys" en "Fluffing a Duck" van Kevin MacLeod (incompetech.com), licentie CC BY 4.0.</p>
+      <p class="klein">Ingebouwde muziek: "Carefree", "Monkeys Spinning Monkeys" en "Fluffing a Duck" van Kevin MacLeod (incompetech.com), licentie CC BY 4.0. Eigen muziek blijft alleen op dit apparaat.</p>
       <button class="knop" data-klaar>Klaar</button>
     </div>`,
   );
@@ -249,6 +287,21 @@ export function instellingenScherm(o: InstellingenOpties) {
     }),
   );
   knop(s, '[data-klaar]', o.opSluit);
+  knop(s, '[data-inspreken]', o.opInspreken);
+  knop(s, '[data-volgende]', o.opVolgende);
+  let plek: Plek = 'eiland';
+  s.querySelectorAll<HTMLButtonElement>('[data-plek]').forEach((b) =>
+    b.addEventListener('click', () => {
+      plek = b.dataset.plek as Plek;
+      s.querySelectorAll('[data-plek]').forEach((x) => x.classList.toggle('gekozen', x === b));
+    }),
+  );
+  const invoer = s.querySelector<HTMLInputElement>('[data-bestand]')!;
+  knop(s, '[data-toevoegen]', () => invoer.click());
+  invoer.addEventListener('change', () => {
+    if (invoer.files?.length) o.opToevoegen(invoer.files, plek);
+  });
+  s.querySelectorAll<HTMLButtonElement>('[data-wis]').forEach((b) => b.addEventListener('click', () => o.opVerwijder(b.dataset.wis!)));
 }
 
 export interface GeheimRegel {
@@ -310,4 +363,221 @@ export function wachtwoordScherm(opProbeer: (tekst: string) => boolean, opLater:
   });
   knop(s, '[data-open]', probeer);
   knop(s, '[data-later]', opLater);
+}
+
+export interface KastOpties {
+  titel: string;
+  uiterlijk: Uiterlijk;
+  stand: KastStand;
+  opKies(u: Uiterlijk): void;
+  opKoop(item: KastItem): boolean;
+  opKlaar(): void;
+  klik(): void;
+}
+
+type KastTab = 'haar' | 'kleding' | 'hoed' | 'extra' | 'huid';
+
+const TABS: [KastTab, string][] = [
+  ['haar', 'Haar'],
+  ['kleding', 'Kleding'],
+  ['hoed', 'Hoofd'],
+  ['extra', 'Extra'],
+  ['huid', 'Huid'],
+];
+
+/** De kledingkast: het poppetje staat links in beeld en verandert meteen mee. */
+export function kastScherm(o: KastOpties) {
+  const u = { ...o.uiterlijk };
+  let tab: KastTab = 'haar';
+  let teKopen: string | null = null;
+  let hint = '';
+  const s = toon('<div class="kast-paneel"></div>', 'kast');
+  const paneel = s.querySelector<HTMLDivElement>('.kast-paneel')!;
+
+  const stalen = (veld: 'huid' | 'haar' | 'shirt' | 'broek' | 'schoenen', label: string) =>
+    `<h3>${label}</h3><div class="stalen">${KLEUREN[veld]
+      .map((k) => `<button class="staal${u[veld] === k ? ' aan' : ''}" style="background:${k}" data-veld="${veld}" data-kleur="${k}" aria-label="${label}"></button>`)
+      .join('')}</div>`;
+
+  const items = (soort: KastItem['soort']) =>
+    `<div class="items">${KAST.filter((i) => i.soort === soort)
+      .map((i) => {
+        const status = itemStatus(i, o.stand);
+        const aan = u[soort] === i.waarde;
+        const prijs = i.voorwaarde.soort === 'prijs' ? i.voorwaarde.hoefijzers : 0;
+        let onder = '';
+        if (aan) onder = '✓ Aan';
+        else if (status === 'kopen') onder = teKopen === i.id ? `Koop voor ${prijs}!` : `${prijs} hoefijzers`;
+        else if (status === 'op-slot') onder = `🔒 ${slotTekst(i)}`;
+        const klas = ['item', aan ? 'aan' : '', status === 'op-slot' ? 'slot' : '', teKopen === i.id ? 'koop' : ''].join(' ');
+        return `<button class="${klas}" data-item="${i.id}">${veilig(i.naam)}${onder ? `<small>${veilig(onder)}</small>` : ''}</button>`;
+      })
+      .join('')}</div>`;
+
+  const inhoud = () => {
+    switch (tab) {
+      case 'haar':
+        return `<h3>Kapsel</h3>${items('kapsel')}${stalen('haar', 'Haarkleur')}`;
+      case 'kleding':
+        return `${stalen('shirt', 'Shirt')}${stalen('broek', 'Broek')}${stalen('schoenen', 'Schoenen')}`;
+      case 'hoed':
+        return items('hoed');
+      case 'extra':
+        return items('extra');
+      case 'huid':
+        return stalen('huid', 'Huidkleur');
+    }
+  };
+
+  const teken = () => {
+    paneel.innerHTML = `
+      <div class="kast-kop"><h2>${veilig(o.titel)}</h2><span class="kast-geld">${o.stand.hoefijzers} hoefijzers</span></div>
+      <div class="tabs">${TABS.map(([id, naam]) => `<button class="tab${tab === id ? ' actief' : ''}" data-tab="${id}">${naam}</button>`).join('')}</div>
+      <div class="kast-inhoud">${inhoud()}</div>
+      <p class="hint">${veilig(hint)}</p>
+      <button class="knop" data-klaar>Klaar</button>`;
+  };
+
+  paneel.addEventListener('click', (e) => {
+    const doel = (e.target as HTMLElement).closest('button');
+    if (!doel) return;
+    o.klik();
+    hint = '';
+    if (doel.dataset.tab) {
+      tab = doel.dataset.tab as KastTab;
+      teKopen = null;
+    } else if (doel.dataset.veld) {
+      u[doel.dataset.veld as 'huid' | 'haar' | 'shirt' | 'broek' | 'schoenen'] = doel.dataset.kleur!;
+      o.opKies({ ...u });
+    } else if (doel.dataset.item) {
+      const item = KAST.find((i) => i.id === doel.dataset.item)!;
+      const status = itemStatus(item, o.stand);
+      if (status === 'op-slot') {
+        hint = `${item.naam}: ${slotTekst(item)} om dit vrij te spelen.`;
+      } else if (status === 'kopen') {
+        const prijs = item.voorwaarde.soort === 'prijs' ? item.voorwaarde.hoefijzers : 0;
+        if (o.stand.hoefijzers < prijs) {
+          hint = `Je hebt nog ${prijs - o.stand.hoefijzers} hoefijzers nodig. Verdien ze in de obby's!`;
+          teKopen = null;
+        } else if (teKopen !== item.id) {
+          teKopen = item.id; // eerst vragen, dan pas kopen
+        } else if (o.opKoop(item)) {
+          teKopen = null;
+          (u as Record<string, string>)[item.soort] = item.waarde;
+          o.opKies({ ...u });
+        }
+      } else {
+        teKopen = null;
+        (u as Record<string, string>)[item.soort] = item.waarde;
+        o.opKies({ ...u });
+      }
+    } else if ('klaar' in doel.dataset) {
+      o.opKlaar();
+      return;
+    }
+    teken();
+  });
+  teken();
+}
+
+export interface InspreekOpties {
+  zinnen: InspreekZin[];
+  kanOpnemen: boolean;
+  heeft(sleutel: string): boolean;
+  opOpnemen(sleutel: string): Promise<void>;
+  opStop(sleutel: string): Promise<boolean>;
+  opLuister(sleutel: string): void;
+  opWis(sleutel: string): Promise<void>;
+  opSluit(): void;
+}
+
+/** Zelf de zinnen inspreken: opnemen, terugluisteren, opnieuw of wissen. */
+export function inspreekScherm(o: InspreekOpties) {
+  const groepen = [...new Set(o.zinnen.map((z) => z.groep))];
+  const s = toon(
+    `<div class="kaart inspreken">
+      <h2>🎙️ Stem inspreken</h2>
+      <p class="voortgang"></p>
+      <p class="tip">Tik op <b>Opnemen</b>, lees de zin rustig voor en tik op <b>Stop</b>.
+        Bij de dictee-zinnen zeg je het woord, dan de zin, en dan nog een keer het woord.
+        Wat je nog niet hebt ingesproken, leest de computerstem voor.</p>
+      ${o.kanOpnemen ? '' : '<p class="hint">Opnemen werkt hier niet. Zet het spel als app op het beginscherm van de iPad en probeer het daar.</p>'}
+      <p class="hint" data-melding></p>
+      ${groepen
+        .map(
+          (g) => `<h3>${veilig(g)}</h3>${o.zinnen
+            .filter((z) => z.groep === g)
+            .map((z) => `<div class="zin" data-zin="${veilig(z.sleutel)}"><p>${veilig(z.tekst)}</p><div class="zin-knoppen"></div></div>`)
+            .join('')}`,
+        )
+        .join('')}
+      <button class="knop" data-klaar>Klaar</button>
+    </div>`,
+  );
+  const melding = s.querySelector<HTMLParagraphElement>('[data-melding]')!;
+  const voortgang = s.querySelector<HTMLParagraphElement>('.voortgang')!;
+  let opnemend: string | null = null;
+
+  const tekenVoortgang = () => {
+    const n = o.zinnen.filter((z) => o.heeft(z.sleutel)).length;
+    voortgang.innerHTML = `<b>${n} van de ${o.zinnen.length}</b> zinnen ingesproken`;
+  };
+
+  const tekenRij = (rij: HTMLElement) => {
+    const sleutel = rij.dataset.zin!;
+    const heeft = o.heeft(sleutel);
+    const bezig = opnemend === sleutel;
+    rij.classList.toggle('opnemend', bezig);
+    rij.classList.toggle('klaar', heeft);
+    const knoppen = rij.querySelector<HTMLDivElement>('.zin-knoppen')!;
+    if (bezig) {
+      knoppen.innerHTML = '<button class="opname-knop stop" data-actie="stop">⏹ Stop</button>';
+    } else {
+      knoppen.innerHTML = `
+        <button class="opname-knop" data-actie="op" ${!o.kanOpnemen || opnemend ? 'disabled' : ''}>🔴 ${heeft ? 'Opnieuw' : 'Opnemen'}</button>
+        ${heeft ? '<button class="opname-knop" data-actie="luister" aria-label="Luister">▶️</button><button class="opname-knop" data-actie="wis" aria-label="Wis">🗑</button>' : ''}`;
+    }
+  };
+
+  const rijen = [...s.querySelectorAll<HTMLElement>('[data-zin]')];
+  const tekenAlles = () => {
+    rijen.forEach(tekenRij);
+    tekenVoortgang();
+  };
+
+  s.addEventListener('click', async (e) => {
+    const knop = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-actie]');
+    if (!knop) return;
+    const rij = knop.closest<HTMLElement>('[data-zin]')!;
+    const sleutel = rij.dataset.zin!;
+    melding.textContent = '';
+    switch (knop.dataset.actie) {
+      case 'op':
+        try {
+          await o.opOpnemen(sleutel);
+          opnemend = sleutel;
+        } catch {
+          melding.textContent = 'De microfoon werkt niet. Sta de microfoon toe (Instellingen → Safari → Microfoon) en probeer het opnieuw.';
+        }
+        tekenAlles();
+        break;
+      case 'stop': {
+        opnemend = null;
+        const gelukt = await o.opStop(sleutel);
+        if (!gelukt) melding.textContent = 'Er is niets opgenomen. Probeer het nog een keer.';
+        tekenAlles();
+        if (gelukt) o.opLuister(sleutel);
+        break;
+      }
+      case 'luister':
+        o.opLuister(sleutel);
+        break;
+      case 'wis':
+        await o.opWis(sleutel);
+        tekenAlles();
+        break;
+    }
+  });
+  knop(s, '[data-klaar]', o.opSluit);
+  tekenAlles();
 }

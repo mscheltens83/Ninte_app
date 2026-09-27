@@ -19,9 +19,10 @@ const computer = window.matchMedia('(hover: hover) and (pointer: fine)').matches
 function welkom() {
   const tekst = spel.seizoen
     ? seizoenGroet(spel.seizoen, stand.speler)
-    : `Hoi ${stand.speler}! Volg het bordje naar de Deuren-obby.`;
-  spel.hud.toonBanner(tekst, () => spreek(tekst), { duur: 7000 });
-  spreek(tekst);
+    : `Hoi ${stand.speler}! Volg de bordjes naar de Deuren-obby of de Reken-obby.`;
+  const sleutel = spel.seizoen ? undefined : 'welkom-terug';
+  spel.hud.toonBanner(tekst, () => spreek(tekst, sleutel), { duur: 7000 });
+  spreek(tekst, sleutel);
 }
 
 function toonUitleg(daarna?: () => void) {
@@ -49,7 +50,7 @@ function kiesDieren() {
     (naam, kleur) => {
       stand.pony = { naam, kleur };
       spel.geluid.goed();
-      spreek(`${naam}. Wat een mooie naam!`);
+      spreek(`${naam}. Wat een mooie naam!`, 'mooie-naam');
       dierKiezer(
         'puppy',
         HOND_KLEUREN,
@@ -58,8 +59,14 @@ function kiesDieren() {
           bewaarStand(stand);
           spel.maakDieren();
           spel.geluid.blaf();
-          spreek(`${naam}. Wat een leuke naam!`);
-          speelVerder();
+          spreek(`${naam}. Wat een leuke naam! En nu maak je je eigen poppetje.`, 'leuke-naam');
+          // Vooraf: eerst het poppetje aankleden, dan de uitleg.
+          sluitScherm();
+          spel.begin();
+          spel.openKast('Maak je poppetje!', () => {
+            if (!stand.uitlegGezien) toonUitleg(welkom);
+            else welkom();
+          });
         },
         () => spel.geluid.klik(),
       );
@@ -73,13 +80,14 @@ titelScherm(() => {
   spel.startGeluid();
   spel.geluid.klik();
   if (!stand.pony || !stand.puppy) {
-    spreek(`Hoi ${stand.speler}! Welkom in Nintes Wereld.`);
+    spreek(`Hoi ${stand.speler}! Welkom in Nintes Wereld.`, 'welkom');
     kiesDieren();
   } else {
     speelVerder();
   }
 });
 
+spel.hud.kastKnop.addEventListener('click', () => spel.openKast());
 spel.hud.geheimenKnop.addEventListener('click', () => spel.toonGeheimen());
 spel.hud.instellingenKnop.addEventListener('click', () => spel.toonInstellingen());
 

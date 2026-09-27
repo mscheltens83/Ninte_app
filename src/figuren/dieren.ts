@@ -162,6 +162,10 @@ export class Pony extends Dier {
   readonly hoofdAnker = new THREE.Vector3(0, 2.22, 1.02);
   private magisch = false;
 
+  get isMagisch() {
+    return this.magisch;
+  }
+
   steiger() {
     this.startSpeciaal('steigeren', 1.4);
   }
