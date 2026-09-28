@@ -195,9 +195,10 @@ export class Opnames {
     for (const spoor of o.stream.getTracks()) spoor.stop(); // microfoon weer uit
     const data = new Blob(o.stukjes, { type: o.recorder.mimeType || 'audio/mp4' });
     if (data.size < 1000) return false;
+    if (!await bewaar('opnames', { sleutel, data } satisfies OpnameRij)) return false;
     this.rijen.set(sleutel, data);
     this.cache.delete(sleutel);
-    return bewaar('opnames', { sleutel, data } satisfies OpnameRij);
+    return true;
   }
 
   /** Opname afbreken zonder te bewaren. */

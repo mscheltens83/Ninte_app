@@ -51,9 +51,10 @@ export class Besturing {
     springKnopEl.addEventListener('pointerup', laatSpring);
     springKnopEl.addEventListener('pointercancel', laatSpring);
     springKnopEl.addEventListener('pointerleave', laatSpring);
+    springKnopEl.addEventListener('click', (e) => { if (this.aan && e.detail === 0) this.springVraag = true; });
 
     window.addEventListener('keydown', (e) => {
-      if (this.isTypveld(e.target)) return;
+      if (!this.aan || this.isTypveld(e.target)) return;
       this.toetsen.add(e.code);
       if (e.code === 'Space') {
         e.preventDefault();
@@ -69,7 +70,7 @@ export class Besturing {
   }
 
   private isTypveld(doel: EventTarget | null): boolean {
-    return doel instanceof HTMLInputElement || doel instanceof HTMLTextAreaElement;
+    return doel instanceof HTMLElement && !!doel.closest('input, textarea, select, button, [contenteditable="true"]');
   }
 
   /** Alles loslaten, bijvoorbeeld als er een scherm over het spel komt. */

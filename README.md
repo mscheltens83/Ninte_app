@@ -4,6 +4,17 @@ Een Roblox-achtig leerspel voor Ninte (9 jaar, groep 6). Ze zorgt voor haar eige
 
 Het volledige plan staat in [PLAN.md](PLAN.md).
 
+## Leren en veilig bewaren
+
+- **Help je dieren (0/6):** typ zes woorden per dag om de pony te voeren en te borstelen en de puppy een bal te laten halen. Eerste antwoorden en verbeteringen worden apart geteld. Het bekijken van een woord telt als hulp.
+- **Voor ouders:** bereikbaar vanaf de titel en via Instellingen. Voeg schoolwoorden toe, kies categorieën en bekijk de resultaten van zelfstandig spellen, deuren en lastige sommen.
+- **Herhalen:** goede woorden schuiven pas verder na 1, 3, 7 en 14 dagen. Fouten komen eerder terug; lastige deelsommen gebruiken hun eigen leerresultaten.
+- **Speeltijd:** standaard 20 minuten per dag, aanpasbaar door ouders. De klok telt actief spelen en dictee, pauzeert in andere menu's en bij een verborgen tabblad. Na afsluiten rusten de dieren en verschijnt een dagoverzicht.
+- **Voortgang:** gecontroleerde opslag met een reservekopie, zichtbare foutmeldingen, downloadbare JSON-back-ups en herstel met een vooraf getoonde samenvatting. Een wijziging in een ander tabblad blokkeert overschrijven totdat de pagina is vernieuwd.
+- **Beeld en bediening:** een zuinige instelling zonder schaduwen, minder effecten, een introductie in drie stappen, benoemde kleuren en toetsenbordfocus binnen dialogen.
+
+Een back-up bevat voortgang en instellingen. Eigen muziek en ingesproken audio zitten er niet in. Maak regelmatig een download; browseropslag kan verdwijnen wanneer browsergegevens worden gewist.
+
 ## Wat er nu in zit (fase 1)
 
 - Een blokjeseiland in Roblox-stijl met een stal, een wei, een hondenhok en veel bomen.
@@ -44,24 +55,17 @@ Daarnaast zijn er seizoensverrassingen: sneeuw en kerstmutsen in december, oranj
 
 ### 1. Zet het spel eenmalig online (gratis)
 
-De repository is privé. GitHub Pages werkt daarom alleen met een betaald account. Netlify is gratis en werkt wel:
-
-1. Maak een account op [netlify.com](https://www.netlify.com) (inloggen met GitHub kan).
-2. Kies **Add new site → Import an existing project → GitHub** en geef Netlify toegang tot `Ninte_app`.
-3. Kies de branch met het spel. De instellingen staan al in `netlify.toml`: bouwcommando `npm run build`, map `dist`.
-4. Klik op **Deploy**. Je krijgt een adres, bijvoorbeeld `https://nintes-wereld.netlify.app`.
-
-Elke keer dat er iets nieuws op die branch komt, zet Netlify de nieuwe versie vanzelf online.
+Het spel staat op [GitHub Pages](https://mscheltens83.github.io/Ninte_app/). De openbare repository wordt door `.github/workflows/pages.yml` gebouwd met `npm ci` en `npm run build`. Alleen de gebouwde map `dist` wordt gepubliceerd. Een push naar `claude/eloquent-ramanujan-keneh9` start automatisch een nieuwe publicatie.
 
 ### 2. Zet het als app op de iPad (of Android)
 
 1. Open het adres in **Safari** op de iPad.
 2. Tik op de deelknop (vierkantje met pijl) en kies **Zet op beginscherm**.
-3. Nu opent Nintes Wereld schermvullend, als een echte app. Het werkt ook zonder internet.
+3. Nu opent Nintes Wereld schermvullend, als een app. Gebruik voorlopig een internetverbinding; herstel van offline spelen staat nog gepland.
 
 Op **Android**: open het adres in Chrome, tik op ⋮ en kies **App installeren** (of **Toevoegen aan startscherm**).
 
-Speel altijd via het icoon op het beginscherm. Safari kan bewaarde gegevens van gewone websites wissen als ze een tijd niet gebruikt zijn. Voor apps op het beginscherm gebeurt dat niet.
+Speel via het icoon op het beginscherm en maak regelmatig een back-up bij Voor ouders. Ook een geïnstalleerde app kan voortgang verliezen als browser- of apparaatgegevens worden gewist.
 
 ### 3. Handige instellingen op de iPad
 

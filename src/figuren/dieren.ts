@@ -48,6 +48,8 @@ export abstract class Dier {
   private stapFase = 0;
   private tijd = Math.random() * 10;
   private snelheid = new THREE.Vector3();
+  private rustend = false;
+  rust(ja: boolean) { this.rustend = ja; }
   /** Binnen deze afstand van zijn plekje blijft het dier staan. */
   protected volgAfstand = 0.7;
   protected maxSnelheid = 9;
@@ -97,6 +99,13 @@ export abstract class Dier {
   /** Beweeg richting `doel` (op de grond) en animeer. `dansen`: meehuppelen. */
   update(dt: number, doel: THREE.Vector3, dansen = false) {
     this.tijd += dt;
+    if (this.rustend) {
+      this.snelheid.set(0, 0, 0);
+      this.groep.position.y += (-0.25 - this.groep.position.y) * Math.min(1, dt * 3);
+      for (const p of this.poten) p.groep.rotation.x = p.voor ? -0.9 : 0.9;
+      this.groep.rotation.x = 0;
+      return;
+    }
     const pos = this.groep.position;
     if (this.speciaal) {
       this.speciaal.tijd += dt;

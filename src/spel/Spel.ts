@@ -12,10 +12,12 @@ import { kiesSommen, rekenVraag } from '../leren/rekenen';
 import { spellingVraag, type Vraag } from '../leren/vragen';
 import { INSPREEK_ZINNEN, Opnames } from '../leren/inspreken';
 import { nederlandseStemmen, opSpreken, spreek, stelOpnameSpelerIn, stelStemIn } from '../leren/voorlezen';
-import { WOORDEN, type Categorie } from '../leren/woorden';
-import { bewaarStand, type Spelstand } from '../opslag/opslag';
+import { oefenWoorden } from '../leren/schoolwoorden';
+import { dierenAantal, nieuweDag, telSpeeltijd, tijdVoorbij } from '../leren/dag';
+import { bewaarStand, type DierenTaak, type Spelstand } from '../opslag/opslag';
 import { Hud, veilig } from '../ui/hud';
-import { finishKaart, geheimenScherm, inspreekScherm, instellingenScherm, kastScherm, sluitScherm, tipKaart, wachtwoordScherm } from '../ui/schermen';
+import { finishKaart, geheimenScherm, inspreekScherm, instellingenScherm, kastScherm, sluitScherm, tipKaart, toon, wachtwoordScherm } from '../ui/schermen';
+import { dagAfsluiting, dicteeScherm, dierenScherm, oefenDeur, oudersScherm } from '../ui/lerenSchermen';
 import { AANTAL_POORTEN, DeurenObby, REKEN_THEMA, SPELLING_THEMA, type ObbyGebeurtenis, type Poort } from '../wereld/deurenObby';
 import { EILAND_RAND, STARTPUNT, WATER_HOOGTE, bouwEiland, type Eiland } from '../wereld/eiland';
 import { GEHEIMEN, Geheimen, WACHTWOORD, type GeheimGebeurtenis } from '../wereld/geheimen';
@@ -34,7 +36,6 @@ const SPRING_BUFFER = 0.16; // te vroeg getikt telt ook
 const DANS_NA = 12; // seconden stilstaan voordat Ninte gaat dansen
 const OBBY_OORSPRONG = new THREE.Vector3(29, 0, 7.5);
 const REKEN_OORSPRONG = new THREE.Vector3(29, 0, -18);
-const CATEGORIEEN: Categorie[] = ['langermaakwoord', 'ei-ij', 'au-ou'];
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
 const AANTAL_GOUDEN = 5;
 
@@ -106,8 +107,14 @@ export class Spel {
   private spoorTimer = 0;
   private grondSporen: THREE.Vector3[] = [];
   private grondTimer = 0;
+  private dicteeActief = false;
+  private bewaarTimer = 0;
+  private doelKnop = document.createElement('button');
+  private introStart = STARTPUNT.clone();
+  private verzorging: { taak: DierenTaak; tijd: number; object: THREE.Mesh; begin: THREE.Vector3; doel: THREE.Vector3 } | null = null;
 
   constructor(canvas: HTMLCanvasElement, readonly stand: Spelstand) {
+    nieuweDag(stand);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -174,6 +181,14 @@ export class Spel {
     stelOpnameSpelerIn((sleutels) => this.speelOpnames(sleutels));
     this.hud.zetHoefijzers(stand.hoefijzers);
     this.hud.zichtbaar(false);
+    this.doelKnop.id = 'dagdoel';
+    this.doelKnop.className = 'paneel';
+    this.doelKnop.onclick = () => this.toonDieren();
+    this.hud.hud.appendChild(this.doelKnop);
+    this.zetDagdoel();
+    this.pasKwaliteitAan();
+    window.addEventListener('pagehide', () => bewaarStand(this.stand));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) bewaarStand(this.stand); });
 
     window.addEventListener('resize', () => this.pasFormaatAan());
     this.pasFormaatAan();
@@ -220,12 +235,11 @@ export class Spel {
   /** Nieuwe vragen voor een obby: woorden of sommen, lastige vaker. */
   private nieuweVragen(obby: DeurenObby): Vraag[] {
     if (obby.thema.id === 'rekenen') return kiesSommen(this.stand.sommen).map(rekenVraag);
-    const perCategorie = Math.ceil(AANTAL_POORTEN / CATEGORIEEN.length);
-    const woorden = CATEGORIEEN.flatMap((c) => kiesWoorden(WOORDEN, this.stand.woorden, perCategorie, [c]));
-    for (let i = woorden.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [woorden[i], woorden[j]] = [woorden[j], woorden[i]];
-    }
+    const bank = oefenWoorden(this.stand.weekwoorden, this.stand.alleenWeekwoorden, this.stand.categorieen);
+    const woorden = kiesWoorden(bank, this.stand.woorden, AANTAL_POORTEN);
+    // Ook een kleine weeklijst vult alle zes deuren.
+    while (woorden.length > 0 && woorden.length < AANTAL_POORTEN) woorden.push(bank[woorden.length % bank.length]);
+    if (!woorden.length) throw new Error('Er zijn geen oefenwoorden beschikbaar.');
     return woorden.slice(0, AANTAL_POORTEN).map(spellingVraag);
   }
 
@@ -242,6 +256,7 @@ export class Spel {
     this.besturing.aan = true;
     this.camYaw = 0;
     this.camDoel.set(this.speler.pos.x, this.speler.pos.y + 1.8, this.speler.pos.z);
+    if (this.stand.dag.klaar || tijdVoorbij(this.stand)) this.sluitDagAf();
   }
 
   /** Een scherm over het spel: besturing uit. */
@@ -252,9 +267,15 @@ export class Spel {
   }
 
   hervat() {
+    this.dicteeActief = false;
+    if (this.stand.dag.klaar || tijdVoorbij(this.stand)) { this.sluitDagAf(); return; }
     sluitScherm();
     this.modus = 'spelen';
+    this.hud.zichtbaar(true);
     this.besturing.aan = true;
+    this.muziek.demp(false);
+    this.muziek.zetAan(this.stand.muziekAan);
+    this.renderer.domElement.focus({ preventScroll: true });
   }
 
   toonInstellingen(klik = true) {
@@ -274,8 +295,9 @@ export class Spel {
       opToevoegen: async (bestanden, plek) => {
         const aantal = await this.muziek.voegToe(bestanden, plek);
         this.herlaadInstellingen();
-        const tekst = aantal === 1 ? 'Nummer toegevoegd!' : `${aantal} nummers toegevoegd!`;
-        this.hud.toonBanner(`♪ ${tekst}`, null, { goed: true, duur: 3000 });
+        const tekst = aantal === bestanden.length ? (aantal === 1 ? 'Nummer toegevoegd!' : `${aantal} nummers toegevoegd!`)
+          : `${aantal} van ${bestanden.length} nummers bewaard. De overige konden niet worden opgeslagen; controleer de beschikbare ruimte.`;
+        this.hud.toonBanner(`♪ ${tekst}`, null, { goed: aantal === bestanden.length, duur: 7000 });
       },
       opVerwijder: async (id) => {
         await this.muziek.verwijderEigen(id);
@@ -311,6 +333,7 @@ export class Spel {
         this.geluid.klik();
         this.toonInspreken();
       },
+      opOuders: () => this.toonOuders(),
       opSluit: () => {
         this.geluid.klik();
         this.hervat();
@@ -380,6 +403,117 @@ export class Spel {
     );
   }
 
+  pasKwaliteitAan() {
+    const zuinig = this.stand.beeldkwaliteit === 'zuinig';
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, zuinig ? 1 : 2));
+    this.renderer.shadowMap.enabled = !zuinig;
+    const rustig = this.stand.minderEffecten || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.effecten.rustig = rustig;
+    this.effecten.zuinig = zuinig;
+    document.body.classList.toggle('minder-effecten', rustig);
+    this.pasFormaatAan();
+  }
+
+  private zetDagdoel() {
+    this.doelKnop.textContent = this.stand.introStap < 3
+      ? ['Stap 1/3 · Loop een stukje', 'Stap 2/3 · Spring!', 'Stap 3/3 · Kies een oefendeur'][this.stand.introStap]
+      : `🐴 Help je dieren · ${dierenAantal(this.stand)}/6`;
+  }
+
+  private introVerder(stap: number) {
+    this.stand.introStap = stap;
+    if (stap === 3) this.stand.uitlegGezien = true;
+    bewaarStand(this.stand);
+    this.zetDagdoel();
+  }
+
+  toonOuders(opSluit?: () => void) {
+    this.dicteeActief = false;
+    this.pauzeer();
+    oudersScherm(this.stand, () => {
+      this.pasKwaliteitAan();
+      // Start een verse ronde veilig op het eiland, zodat oude vragen niet blijven staan.
+      for (const o of this.obbies) this.nieuweRonde(o);
+      this.zetSpeler(STARTPUNT, Math.PI);
+      this.zetDagdoel();
+    }, opSluit ?? (() => this.hervat()), this.stand.dag.klaar ? () => {
+      if (tijdVoorbij(this.stand)) {
+        const feedback = document.querySelector<HTMLElement>('[data-feedback]');
+        if (feedback) feedback.textContent = 'Verhoog eerst de dagelijkse speeltijd en bewaar de instellingen.';
+        return;
+      }
+      this.stand.dag.klaar = false;
+      bewaarStand(this.stand);
+      this.hervat();
+    } : undefined);
+  }
+
+  toonDieren() {
+    if (this.modus !== 'spelen') return;
+    this.pauzeer();
+    if (this.stand.introStap < 3) {
+      if (this.stand.introStap === 2) {
+        oefenDeur(() => { this.introVerder(3); this.hervat(); this.hud.meld('Goed zo! Je bent klaar om je dieren te helpen.'); });
+      } else {
+        const computer = window.matchMedia('(pointer: fine)').matches;
+        const uitleg = this.stand.introStap === 0
+          ? (computer ? 'Houd W, A, S of D ingedrukt om te lopen.' : 'Sleep de joystick linksonder om een stukje te lopen.')
+          : (computer ? 'Druk op de spatiebalk om te springen.' : 'Tik op de pijl rechtsonder om te springen.');
+        const s = toon(`<div class="kaart"><h2>Eerst even oefenen</h2><p>${uitleg}</p><button class="knop" data-oefen>Ik ga oefenen</button><button class="knop wit" data-skip>Ik ken de besturing al</button></div>`);
+        s.querySelector<HTMLButtonElement>('[data-oefen]')!.onclick = () => this.hervat();
+        s.querySelector<HTMLButtonElement>('[data-skip]')!.onclick = () => { this.introVerder(2); this.hervat(); this.toonDieren(); };
+      }
+      return;
+    }
+    const menu = () => {
+      this.dicteeActief = false;
+      dierenScherm(this.stand, (taak) => {
+        this.dicteeActief = true;
+        dicteeScherm(this.stand, taak, (n) => this.geefHoefijzers(n), () => {
+          this.dicteeActief = false;
+          this.hervat();
+          this.verzorgDier(taak);
+          this.zetDagdoel();
+        }, () => { this.dicteeActief = false; this.zetDagdoel(); menu(); });
+      }, () => this.hervat(), () => this.sluitDagAf());
+    };
+    menu();
+  }
+
+  private sluitDagAf() {
+    this.dicteeActief = false;
+    this.stand.dag.klaar = true;
+    this.pauzeer();
+    this.hud.verbergBanner();
+    this.muziek.demp(true);
+    this.muziek.zetAan(false);
+    bewaarStand(this.stand);
+    dagAfsluiting(this.stand, () => this.toonOuders());
+  }
+
+  private verzorgDier(taak: DierenTaak) {
+    if (this.verzorging) this.ruimVerzorgingOp();
+    this.zetSpeler(STARTPUNT, Math.PI);
+    this.pony?.groep.position.set(STARTPUNT.x + 2, 0, STARTPUNT.z);
+    this.puppy?.groep.position.set(STARTPUNT.x - 1.5, 0, STARTPUNT.z);
+    const object = new THREE.Mesh(
+      taak === 'voeren' ? new THREE.ConeGeometry(0.18, 0.65, 8) : taak === 'borstelen' ? new THREE.BoxGeometry(0.45, 0.18, 0.3) : new THREE.SphereGeometry(0.22, 12, 8),
+      new THREE.MeshStandardMaterial({ color: taak === 'voeren' ? '#ff8a24' : taak === 'borstelen' ? '#a35be0' : '#c6e642' }));
+    const begin = new THREE.Vector3(STARTPUNT.x - 1.5, 0.3, STARTPUNT.z);
+    const doel = begin.clone().add(new THREE.Vector3(-4, 0, 2));
+    this.verzorging = { taak, tijd: 0, object, begin, doel };
+    this.scene.add(object);
+    this.hud.toonBanner(taak === 'voeren' ? 'Smullen! Je pony krijgt een wortel.' : taak === 'borstelen' ? 'Je pony wordt heerlijk geborsteld.' : 'Daar gaat je puppy! Haal de bal!', null, { goed: true, duur: 7000 });
+  }
+
+  private ruimVerzorgingOp() {
+    if (!this.verzorging) return;
+    const obj = this.verzorging.object;
+    this.scene.remove(obj); obj.geometry.dispose();
+    (obj.material as THREE.Material).dispose();
+    this.verzorging = null;
+  }
+
   private pasFormaatAan() {
     const b = window.innerWidth;
     const h = window.innerHeight;
@@ -392,7 +526,17 @@ export class Spel {
 
   private frame(tijd: number) {
     this.klok.update(tijd);
-    const dt = Math.min(this.klok.getDelta(), 1 / 20);
+    const verstreken = this.klok.getDelta();
+    const dt = Math.min(verstreken, 1 / 20);
+    const rustte = this.stand.dag.klaar;
+    if (nieuweDag(this.stand)) {
+      if (this.dicteeActief || (rustte && this.modus === 'scherm')) this.hervat();
+      this.zetDagdoel(); bewaarStand(this.stand);
+    }
+    if (telSpeeltijd(this.stand, verstreken, !document.hidden && (this.modus === 'spelen' || this.dicteeActief)) && !this.stand.dag.klaar)
+      this.sluitDagAf();
+    this.bewaarTimer += dt;
+    if (this.bewaarTimer >= 15 && (this.modus === 'spelen' || this.dicteeActief)) { this.bewaarTimer = 0; bewaarStand(this.stand); }
     this.tijd += dt;
     this.besturing.update();
 
@@ -400,6 +544,7 @@ export class Spel {
     if (this.modus === 'kast') this.updateKastCamera(dt);
     if (this.modus === 'spelen') {
       this.updateSpeler(dt);
+      if (this.stand.introStap === 0 && new THREE.Vector3(this.speler.pos.x, 0, this.speler.pos.z).distanceTo(this.introStart) > 1.5) this.introVerder(1);
       for (const o of this.obbies) this.verwerk(o, o.obby.update(dt, this.speler));
       this.verwerkGeheimen(this.geheimen.update(dt, this.speler));
       for (const tik of this.besturing.neemTikken()) this.tik(tik.x, tik.y);
@@ -433,6 +578,7 @@ export class Spel {
 
   /** Glinsters: op het water, rond gouden hoefijzers en rond de eenhoorn. */
   private updateGlinsters(dt: number) {
+    if (this.stand.beeldkwaliteit === 'zuinig' || this.effecten.rustig) return;
     this.glinsterTimer -= dt;
     if (this.glinsterTimer > 0) return;
     this.glinsterTimer = 0.06;
@@ -588,6 +734,7 @@ export class Spel {
     if (wilSpringen) this.springBuffer = SPRING_BUFFER;
     this.coyote = s.opGrond ? COYOTE_TIJD : this.coyote - dt;
     if (this.springBuffer > 0 && this.coyote > 0 && this.terugTimer < 0) {
+      if (this.stand.introStap === 1) this.introVerder(2);
       s.snelheid.y = SPRONGSNELHEID;
       this.coyote = 0;
       this.springBuffer = 0;
@@ -719,6 +866,23 @@ export class Spel {
   }
 
   private updateDieren(dt: number) {
+    this.pony?.rust(this.stand.dag.klaar);
+    this.puppy?.rust(this.stand.dag.klaar);
+    const verzorging = this.verzorging;
+    if (verzorging && !this.stand.dag.klaar) {
+      verzorging.tijd += dt;
+      const { taak, tijd, object, begin, doel } = verzorging;
+      if (taak === 'apporteren') {
+        if (tijd < 2) object.position.copy(begin).lerp(doel, tijd / 2).add(new THREE.Vector3(0, Math.sin(tijd / 2 * Math.PI) * 1.3, 0));
+        else if (tijd < 4.5) object.position.copy(doel);
+        else if (this.puppy) object.position.copy(this.puppy.groep.localToWorld(this.puppy.hoofdAnker.clone())).add(new THREE.Vector3(0, -0.35, 0.15));
+      } else if (this.pony) {
+        const punt = this.pony.groep.localToWorld((taak === 'voeren' ? this.pony.hoofdAnker : new THREE.Vector3(0.55, 1.35, 0)).clone());
+        object.position.copy(punt).add(new THREE.Vector3(0, taak === 'voeren' ? -0.2 : Math.sin(tijd * 6) * 0.2, 0));
+        object.rotation.z = taak === 'voeren' ? Math.PI / 2 + Math.sin(tijd * 8) * 0.12 : 0.2;
+      }
+      if (tijd >= 8) { this.ruimVerzorgingOp(); this.pony?.steiger(); }
+    }
     const s = this.speler.pos;
     const inObby = this.huidigeObby()?.obby;
     // De dieren lopen naast de speler (niet ervoor, dan zie je niets).
@@ -738,7 +902,9 @@ export class Spel {
       this.pony.update(dt, doel, this.dansen);
     }
     if (this.puppy) {
-      const doel = inObby
+      const doel = verzorging?.taak === 'apporteren' && verzorging.tijd < 4.5
+        ? verzorging.doel
+        : inObby
         ? inObby.wachtplek(1)
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, 1.5).addScaledVector(voor, 0.2));
       this.puppy.update(dt, doel, this.dansen);
@@ -861,11 +1027,13 @@ export class Spel {
 
   private geefHoefijzers(n: number, van?: THREE.Vector3) {
     this.stand.hoefijzers += n;
+    this.stand.dag.hoefijzers += n;
+    this.zetDagdoel();
     const o = this.huidigeObby();
     if (o) o.ronde.verdiend += n;
     // Hoefijzertjes vliegen vanaf de plek (of vanaf Ninte) naar de teller.
     const p = (van ?? new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 2, this.speler.pos.z)).clone().project(this.camera);
-    this.hud.vliegHoefijzers(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight, n);
+    if (!this.effecten.rustig) this.hud.vliegHoefijzers(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight, n);
     this.hud.zetHoefijzers(this.stand.hoefijzers, true);
     this.hud.meld(`+${n}`);
     this.geluid.munt();
@@ -909,6 +1077,7 @@ export class Spel {
             const stats = this.stats(vraag);
             stats[vraag.sleutel] = verwerkAntwoord(stats[vraag.sleutel], true, Date.now());
             o.ronde.goedInEenKeer++;
+            if (vraag.soort === 'rekenen') this.stand.dag.sommenGoed++;
           }
           this.geluid.goed();
           this.opnames.speelWillekeurig('goed-'); // alleen als je zelf aanmoedigingen hebt ingesproken
@@ -923,6 +1092,7 @@ export class Spel {
           if (g.poort.pogingen === 1) {
             const stats = this.stats(vraag);
             stats[vraag.sleutel] = verwerkAntwoord(stats[vraag.sleutel], false, Date.now());
+            if (vraag.soort === 'rekenen') this.stand.dag.sommenFout++;
             bewaarStand(this.stand);
           }
           this.geluid.fout();
@@ -935,6 +1105,11 @@ export class Spel {
           this.geluid.plof();
           this.effecten.hooi(new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 0.3, this.speler.pos.z));
           window.setTimeout(() => {
+            if (this.stand.dag.klaar || this.modus !== 'spelen') {
+              o.obby.herstelPoort(p);
+              this.zetSpeler(p.voor, OBBY_RICHTING);
+              return;
+            }
             this.pauzeer();
             const uitleg = `${vraag.goed}. ${vraag.tip}`;
             tipKaart(vraag.tipTitel, vraag.goed, vraag.fout, vraag.tip, () => spreek(uitleg), () => {
@@ -963,6 +1138,7 @@ export class Spel {
           bewaarStand(this.stand);
           const nieuweKleding = KAST.filter((i) => beschikbareItems(this.stand).has(i.id) && !kledingVoor.has(i.id)).map((i) => i.naam);
           window.setTimeout(() => {
+            if (this.stand.dag.klaar || this.modus !== 'spelen') return;
             this.pauzeer();
             spreek('Obby gehaald! Goed gedaan!', 'obby-gehaald');
             finishKaart(

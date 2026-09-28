@@ -1,7 +1,7 @@
 // Woordkaarten voor groep 6, ingedeeld volgens de categorieën van Staal.
 // Elke zin bevat het woord precies zoals het gespeld moet worden.
 
-export type Categorie = 'langermaakwoord' | 'ei-ij' | 'au-ou';
+export type Categorie = 'langermaakwoord' | 'ei-ij' | 'au-ou' | 'schoolwoord';
 
 export interface Woordkaart {
   woord: string;
@@ -17,6 +17,7 @@ export const CATEGORIE_NAMEN: Record<Categorie, string> = {
   langermaakwoord: 'Langermaakwoord',
   'ei-ij': 'Weetwoord: ei of ij',
   'au-ou': 'Weetwoord: au of ou',
+  schoolwoord: 'Overige schoolwoorden',
 };
 
 export const WOORDEN: Woordkaart[] = [

@@ -19,6 +19,9 @@ export function maakFouteVariant(kaart: Woordkaart): string {
       if (w.includes('au')) return w.replace('au', 'ou');
       if (w.includes('ou')) return w.replace('ou', 'au');
       break;
+    case 'schoolwoord':
+      // Schoolwoorden zonder een bekende regel oefenen we als woordbeeld en dictee.
+      return w.length > 2 ? w.slice(0, -1) : w + w.slice(-1);
   }
   throw new Error(`Geen foute variant te maken voor "${w}"`);
 }
@@ -27,7 +30,8 @@ const GAT = '___';
 
 /** De voorbeeldzin met een gat op de plek van het woord. */
 export function zinMetGat(kaart: Woordkaart): string {
-  const patroon = new RegExp(`(^|[^a-zA-Z])${kaart.woord}(?![a-zA-Z])`, 'i');
+  const woord = kaart.woord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patroon = new RegExp(`(^|[^\\p{L}])${woord}(?![\\p{L}])`, 'iu');
   return kaart.zin.replace(patroon, (_m, voor: string) => voor + GAT);
 }
 
@@ -47,6 +51,8 @@ export function tipVoor(kaart: Woordkaart): string {
       return w.includes('au')
         ? `Weetwoord! Je schrijft ${w} met au. Dat moet je onthouden.`
         : `Weetwoord! Je schrijft ${w} met ou. Dat moet je onthouden.`;
+    case 'schoolwoord':
+      return `Kijk rustig naar ${w}. Let op het lastige stukje. Spreek het woord uit en probeer het straks zonder voorbeeld.`;
   }
 }
 

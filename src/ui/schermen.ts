@@ -8,32 +8,59 @@ import { veilig } from './hud';
 
 const houder = () => document.getElementById('schermen')!;
 
-function toon(html: string, klasse = ''): HTMLDivElement {
+let terugFocus: HTMLElement | null = null;
+export function toon(html: string, klasse = ''): HTMLDivElement {
+  if (!houder().firstElementChild) terugFocus = document.activeElement as HTMLElement | null;
   const scherm = document.createElement('div');
   scherm.className = `scherm ${klasse}`;
   scherm.innerHTML = html;
+  scherm.setAttribute('role', 'dialog');
+  scherm.setAttribute('aria-modal', 'true');
+  scherm.tabIndex = -1;
+  const titel = scherm.querySelector('h1, h2');
+  if (titel) { titel.id = 'scherm-titel'; scherm.setAttribute('aria-labelledby', titel.id); }
+  else scherm.setAttribute('aria-label', 'Spelscherm');
+  scherm.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const velden = [...scherm.querySelectorAll<HTMLElement>('button, input, textarea, select, summary, [tabindex="0"]')]
+      .filter((v) => !v.hasAttribute('disabled') && !v.hidden && v.getClientRects().length > 0);
+    const eerste = velden[0], laatste = velden.at(-1);
+    if (!eerste) { e.preventDefault(); scherm.focus(); }
+    else if (e.shiftKey && (document.activeElement === eerste || document.activeElement === scherm)) { e.preventDefault(); laatste?.focus(); }
+    else if (!e.shiftKey && (document.activeElement === laatste || !scherm.contains(document.activeElement))) { e.preventDefault(); eerste.focus(); }
+  });
   houder().replaceChildren(scherm);
+  for (const id of ['hud', 'vlak', 'canvas']) { const el = document.getElementById(id); if (el) el.inert = true; }
+  requestAnimationFrame(() => {
+    if (scherm.isConnected && !scherm.contains(document.activeElement))
+      (scherm.querySelector<HTMLElement>('[data-focus]') ?? scherm.querySelector<HTMLElement>('button, input, textarea, select') ?? scherm).focus({ preventScroll: true });
+  });
   return scherm;
 }
 
 export function sluitScherm() {
   houder().replaceChildren();
+  for (const id of ['hud', 'vlak', 'canvas']) { const el = document.getElementById(id); if (el) el.inert = false; }
+  if (terugFocus?.isConnected) terugFocus.focus({ preventScroll: true });
+  terugFocus = null;
 }
 
 function knop(scherm: HTMLElement, selector: string, actie: () => void) {
   scherm.querySelector<HTMLButtonElement>(selector)!.addEventListener('click', actie);
 }
 
-export function titelScherm(opSpelen: () => void) {
+export function titelScherm(opSpelen: () => void, opOuders?: () => void) {
   const s = toon(
     `<div class="titel">
       <h1>Nintes Wereld</h1>
       <p class="ondertitel">Paarden · Honden · Spelling-avonturen</p>
       <button class="knop" data-spelen>Spelen</button>
+      ${opOuders ? '<button class="knop wit" data-ouders>Voor ouders</button>' : ''}
     </div>`,
     'doorzichtig',
   );
   knop(s, '[data-spelen]', opSpelen);
+  if (opOuders) knop(s, '[data-ouders]', opOuders);
 }
 
 /**
@@ -62,7 +89,7 @@ export function dierKiezer(
           .join('')}
       </div>
       <p><b>${vraag}</b></p>
-      <input class="naamveld" type="text" maxlength="14" placeholder="Typ een naam"
+      <input class="naamveld" aria-label="${vraag}" type="text" maxlength="14" placeholder="Typ een naam"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
       <p class="hint"></p>
       <button class="knop" data-verder>Verder</button>
@@ -211,6 +238,7 @@ export interface InstellingenOpties {
   opStem(naam: string | null): void;
   opTempo(tempo: number): void;
   opInspreken(): void;
+  opOuders(): void;
   opSluit(): void;
 }
 
@@ -222,7 +250,7 @@ const TEMPO_KEUZES: [string, number][] = [
 
 export function instellingenScherm(o: InstellingenOpties) {
   const schakelaar = (id: string, label: string, aan: boolean) =>
-    `<div class="rij"><span>${label}</span><button class="schakelaar${aan ? ' aan' : ''}" data-schakel="${id}" role="switch" aria-checked="${aan}">${aan ? 'Aan' : 'Uit'}</button></div>`;
+    `<div class="rij"><span>${label}</span><button class="schakelaar${aan ? ' aan' : ''}" aria-label="${label}" data-schakel="${id}" role="switch" aria-checked="${aan}">${aan ? 'Aan' : 'Uit'}</button></div>`;
   const stemmen = o.stemmen.length
     ? [{ naam: '', label: 'Automatisch (de mooiste)' }, ...o.stemmen]
         .map(
@@ -234,6 +262,7 @@ export function instellingenScherm(o: InstellingenOpties) {
   const s = toon(
     `<div class="kaart instellingen">
       <h2>Instellingen</h2>
+      <button class="knop wit" data-ouders>Voor ouders · leren en voortgang</button>
       ${schakelaar('geluid', 'Geluidjes', o.geluidAan)}
       ${schakelaar('muziek', 'Muziek', o.muziekAan)}
       <div class="rij"><span class="nu-speelt">♪ ${veilig(o.huidigNummer ?? '...')}</span><button class="tempo-knop" data-volgende>⏭ Ander nummer</button></div>
@@ -264,6 +293,7 @@ export function instellingenScherm(o: InstellingenOpties) {
       <button class="knop" data-klaar>Klaar</button>
     </div>`,
   );
+  knop(s, '[data-ouders]', o.opOuders);
   s.querySelectorAll<HTMLButtonElement>('[data-schakel]').forEach((b) =>
     b.addEventListener('click', () => {
       const aan = !b.classList.contains('aan');
@@ -392,11 +422,12 @@ export function kastScherm(o: KastOpties) {
   let teKopen: string | null = null;
   let hint = '';
   const s = toon('<div class="kast-paneel"></div>', 'kast');
+  s.setAttribute('aria-label', o.titel);
   const paneel = s.querySelector<HTMLDivElement>('.kast-paneel')!;
 
   const stalen = (veld: 'huid' | 'haar' | 'shirt' | 'broek' | 'schoenen', label: string) =>
     `<h3>${label}</h3><div class="stalen">${KLEUREN[veld]
-      .map((k) => `<button class="staal${u[veld] === k ? ' aan' : ''}" style="background:${k}" data-veld="${veld}" data-kleur="${k}" aria-label="${label}"></button>`)
+      .map((k, i) => `<button class="staal${u[veld] === k ? ' aan' : ''}" style="background:${k}" data-veld="${veld}" data-kleur="${k}" aria-label="${label}: ${kleurNaam(veld, i)}" aria-pressed="${u[veld] === k}" title="${kleurNaam(veld, i)}"></button>`)
       .join('')}</div>`;
 
   const items = (soort: KastItem['soort']) =>
@@ -410,7 +441,7 @@ export function kastScherm(o: KastOpties) {
         else if (status === 'kopen') onder = teKopen === i.id ? `Koop voor ${prijs}!` : `${prijs} hoefijzers`;
         else if (status === 'op-slot') onder = `🔒 ${slotTekst(i)}`;
         const klas = ['item', aan ? 'aan' : '', status === 'op-slot' ? 'slot' : '', teKopen === i.id ? 'koop' : ''].join(' ');
-        return `<button class="${klas}" data-item="${i.id}">${veilig(i.naam)}${onder ? `<small>${veilig(onder)}</small>` : ''}</button>`;
+        return `<button class="${klas}" aria-pressed="${aan}" data-item="${i.id}">${veilig(i.naam)}${onder ? `<small>${veilig(onder)}</small>` : ''}</button>`;
       })
       .join('')}</div>`;
 
@@ -476,8 +507,24 @@ export function kastScherm(o: KastOpties) {
       return;
     }
     teken();
+    const focus = [...paneel.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      (doel.dataset.tab && b.dataset.tab === doel.dataset.tab) ||
+      (doel.dataset.item && b.dataset.item === doel.dataset.item) ||
+      (doel.dataset.veld && b.dataset.veld === doel.dataset.veld && b.dataset.kleur === doel.dataset.kleur));
+    focus?.focus({ preventScroll: true });
   });
   teken();
+}
+
+function kleurNaam(veld: keyof typeof KLEUREN, index: number): string {
+  const namen = {
+    huid: ['Licht perzik', 'Perzik', 'Lichtbruin', 'Middenbruin', 'Donkerbruin', 'Diepbruin'],
+    haar: ['Zwartbruin', 'Bruin', 'Koper', 'Goudblond', 'Lichtblond', 'Rood', 'Roze', 'Paars'],
+    shirt: ['Paars', 'Roze', 'Geel', 'Groen', 'Blauw', 'Wit', 'Donkerpaars', 'Oranje'],
+    broek: ['Blauw', 'Donkerpaars', 'Bruin', 'Wit', 'Roze', 'Groen'],
+    schoenen: ['Wit', 'Donkerpaars', 'Bruin', 'Roze', 'Blauw', 'Geel'],
+  };
+  return namen[veld][index] ?? `Kleur ${index + 1}`;
 }
 
 export interface InspreekOpties {
@@ -571,7 +618,7 @@ export function inspreekScherm(o: InspreekOpties) {
       case 'stop': {
         opnemend = null;
         const gelukt = await o.opStop(sleutel);
-        if (!gelukt) melding.textContent = 'Er is niets opgenomen. Probeer het nog een keer.';
+        if (!gelukt) melding.textContent = 'De opname kon niet worden bewaard of was te kort. Controleer de vrije ruimte en probeer opnieuw.';
         tekenAlles();
         if (gelukt) o.opLuister(sleutel);
         break;

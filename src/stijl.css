@@ -949,3 +949,36 @@ button {
 .opname-knop:disabled {
   opacity: 0.45;
 }
+/* Een vast doel en rustige, leesbare leer- en ouderpanelen. */
+#dagdoel { position: absolute; top: 82px; left: 14px; max-width: 250px; padding: 12px 16px; cursor: pointer; pointer-events: auto; font: inherit; font-weight: 700; color: #37204e; border: 2px solid white; }
+#banner { top: 145px; }
+.leren { max-width: 720px; text-align: left; }
+.leren h2, .leren .dagdoel { text-align: center; }
+.leren .knop { max-width: 100%; }
+.leren label:not(.vink), .leren textarea, .leren select { display: block; width: 100%; margin: 12px 0; }
+.leren textarea, .leren select { padding: 12px; border: 2px solid #9979bd; border-radius: 12px; font: inherit; color: #37204e; background: white; }
+.leren textarea { resize: vertical; min-height: 130px; touch-action: auto; }
+.leren fieldset { border: 1px solid #c6b3dd; border-radius: 12px; padding: 12px; }
+.vink { display: flex; align-items: center; gap: 12px; margin: 12px 0; cursor: pointer; }
+.vink input { width: 24px; height: 24px; flex-shrink: 0; accent-color: #7b4dff; }
+.feedback { min-height: 1.5em; white-space: pre-line; color: #55336c; font-weight: 600; }
+.dagdoel { font-size: 1.2em; font-weight: 800; }
+.dictee-zin { font-size: 1.25em; }
+.tabel-scroll { overflow-x: auto; }
+.leren table { border-collapse: collapse; width: 100%; font-size: .9em; }
+.leren th, .leren td { padding: 10px; text-align: left; border-bottom: 1px solid #d8c8e8; }
+.oefendeuren { display: flex; gap: 20px; justify-content: center; }
+.oefendeuren button { min-height: 100px; }
+#opslag-waarschuwing { position: absolute; z-index: 50; bottom: 8px; left: 50%; transform: translateX(-50%); width: min(90%, 760px); padding: 10px; background: #fff2cc; color: #4e3209; border-radius: 12px; font-size: 14px; box-shadow: 0 2px 10px #0003; }
+#opslag-waarschuwing button { margin-left: 12px; padding: 8px; cursor: pointer; }
+.startfout { position: absolute; inset: 20%; background: white; padding: 30px; border-radius: 20px; }
+.scherm { max-height: 100dvh; touch-action: pan-y; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #281b63; outline-offset: 3px; }
+.minder-effecten *, .minder-effecten *::before, .minder-effecten *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+@media (max-width: 600px) {
+  #dagdoel { top: 78px; left: 10px; max-width: calc(100% - 20px); font-size: 14px; padding: 9px 12px; }
+  #banner { top: 128px; }
+  .leren { padding: 20px 16px; }
+  .leren table { font-size: 12px; }
+  .leren th, .leren td { padding: 7px; }
+}

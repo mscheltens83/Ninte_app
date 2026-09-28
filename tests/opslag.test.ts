@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bewaarStand, laadStand, nieuweStand } from '../src/opslag/opslag';
+import { bewaarStand, exporteerStand, laadStand, leesBackUp, nieuweStand, opslagMelding, valideerStand } from '../src/opslag/opslag';
 
 function nepOpslag() {
   const data = new Map<string, string>();
@@ -10,6 +10,49 @@ function nepOpslag() {
 }
 
 describe('opslag', () => {
+  it('herstelt een onbruikbare combinatie van categorieën en woorden', () => {
+    const data = { ...nieuweStand(), weekwoorden: [{ woord: 'robot', zin: 'De robot rent.', categorie: 'schoolwoord' }], categorieen: ['ei-ij'] };
+    const resultaat = valideerStand(data);
+    expect(resultaat.aangepast).toBe(true);
+    expect(resultaat.stand.categorieen).toContain('schoolwoord');
+    expect(() => leesBackUp(JSON.stringify({ formaat: 'nintes-wereld-voortgang', versie: 1, stand: { versie: 1 } }))).toThrow('onvolledig');
+  });
+  it('herstelt een vorige goede stand bij beschadiging en een ontbrekende hoofdstand', () => {
+    const opslag = nepOpslag(), stand = nieuweStand();
+    stand.hoefijzers = 42; bewaarStand(stand, opslag);
+    stand.hoefijzers = 50; bewaarStand(stand, opslag);
+    opslag.setItem('nintes-wereld', '{kapot');
+    expect(laadStand(opslag).hoefijzers).toBe(42);
+    expect(opslagMelding().soort).toBe('hersteld');
+    opslag.setItem('nintes-wereld', '');
+    expect(laadStand(opslag).hoefijzers).toBe(42);
+  });
+  it('controleert geneste velden, vreemde typen en ongeldige getallen', () => {
+    const data = { ...nieuweStand(), hoefijzers: -4, geheimen: null, uiterlijk: { huid: 'javascript:', hoed: 'onbekend' },
+      woorden: { hond: { bakje: 99, goed: -1, fout: '2', laatst: Infinity } }, dag: { dieren: { voeren: 80 }, speelSeconden: -1 } };
+    const { stand, aangepast } = valideerStand(data);
+    expect(aangepast).toBe(true);
+    expect(stand.geheimen).toEqual([]);
+    expect(stand.woorden.hond).toEqual({ bakje: 1, goed: 0, fout: 0, laatst: 0 });
+    expect(stand.dag.dieren.voeren).toBe(0);
+    expect(stand.uiterlijk.huid).toMatch(/^#/);
+    expect(stand.hoefijzers).toBe(0);
+  });
+  it('meldt opslagfalen en bewaart de nog niet opgeslagen voortgang in de back-up', () => {
+    const stand = nieuweStand(); stand.hoefijzers = 123;
+    expect(bewaarStand(stand, { setItem: () => { throw new Error('QuotaExceededError'); } })).toBe(false);
+    expect(opslagMelding().soort).toBe('fout');
+    expect(leesBackUp(exporteerStand(stand)).hoefijzers).toBe(123);
+  });
+  it('bewaart alle nieuwe leergegevens in een gecontroleerde back-up', () => {
+    const stand = nieuweStand(); stand.dictee.hond = { bakje: 2, goed: 1, fout: 0, laatst: 100 };
+    stand.weekwoorden = [{ woord: 'robot', zin: 'De robot rent.', categorie: 'schoolwoord' }];
+    stand.dag.dieren.borstelen = 1; stand.beeldkwaliteit = 'zuinig';
+    expect(leesBackUp(exporteerStand(stand))).toEqual(stand);
+    expect(() => leesBackUp('{kapot')).toThrow('leesbare back-up');
+    expect(() => leesBackUp(JSON.stringify({ formaat: 'nintes-wereld-voortgang', versie: 1, stand: { ...stand, geheimen: null } }))).toThrow('ongeldige gegevens');
+    expect(() => leesBackUp('{}')).toThrow('Kies een back-up');
+  });
   it('begint met een lege stand voor Ninte', () => {
     const stand = laadStand(nepOpslag());
     expect(stand.speler).toBe('Ninte');

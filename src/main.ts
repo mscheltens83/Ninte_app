@@ -1,7 +1,7 @@
 import './stijl.css';
 import { HOND_KLEUREN, PONY_KLEUREN } from './figuren/dieren';
 import { initVoorlezen, spreek, stelStemIn } from './leren/voorlezen';
-import { bewaarStand, laadStand } from './opslag/opslag';
+import { bewaarStand, laadStand, opOpslagMelding } from './opslag/opslag';
 import { Spel } from './spel/Spel';
 import { dierKiezer, sluitScherm, titelScherm, uitlegScherm } from './ui/schermen';
 import { seizoenGroet } from './wereld/seizoen';
@@ -11,7 +11,16 @@ stelStemIn(stand.stemNaam, stand.stemTempo);
 initVoorlezen();
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const spel = new Spel(canvas, stand);
+function maakSpel(): Spel {
+  try { return new Spel(canvas, stand); }
+  catch (error) {
+    const schermen = document.getElementById('schermen')!;
+    schermen.textContent = 'Het spel kon niet starten. Vernieuw de pagina en probeer opnieuw. Controleer of je browser 3D-versnelling ondersteunt.';
+    schermen.className = 'startfout';
+    throw error;
+  }
+}
+const spel = maakSpel();
 spel.start();
 
 const computer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -39,7 +48,8 @@ function toonUitleg(daarna?: () => void) {
 function speelVerder() {
   sluitScherm();
   spel.begin();
-  if (!stand.uitlegGezien) toonUitleg(welkom);
+  if (stand.dag.klaar) return;
+  if (!stand.uitlegGezien) spel.toonDieren();
   else welkom();
 }
 
@@ -64,7 +74,7 @@ function kiesDieren() {
           sluitScherm();
           spel.begin();
           spel.openKast('Maak je poppetje!', () => {
-            if (!stand.uitlegGezien) toonUitleg(welkom);
+            if (!stand.uitlegGezien) spel.toonDieren();
             else welkom();
           });
         },
@@ -75,7 +85,7 @@ function kiesDieren() {
   );
 }
 
-titelScherm(() => {
+function toonTitel() { titelScherm(() => {
   // iOS staat geluid en voorlezen pas toe na een tik.
   spel.startGeluid();
   spel.geluid.klik();
@@ -85,6 +95,21 @@ titelScherm(() => {
   } else {
     speelVerder();
   }
+}, () => spel.toonOuders(() => { spel.modus = 'titel'; toonTitel(); })); }
+toonTitel();
+
+const opslagWaarschuwing = document.createElement('div');
+opslagWaarschuwing.id = 'opslag-waarschuwing';
+opslagWaarschuwing.setAttribute('role', 'status');
+document.getElementById('spel')!.appendChild(opslagWaarschuwing);
+opOpslagMelding((m) => {
+  opslagWaarschuwing.replaceChildren();
+  opslagWaarschuwing.hidden = m.soort === 'ok';
+  if (m.soort === 'ok') return;
+  const tekst = document.createElement('span'); tekst.textContent = m.tekst;
+  const knop = document.createElement('button'); knop.textContent = 'Voor ouders';
+  knop.onclick = () => { const titel = spel.modus === 'titel'; spel.toonOuders(titel ? () => { spel.modus = 'titel'; toonTitel(); } : undefined); };
+  opslagWaarschuwing.append(tekst, knop);
 });
 
 spel.hud.kastKnop.addEventListener('click', () => spel.openKast());

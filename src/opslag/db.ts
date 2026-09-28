@@ -8,16 +8,21 @@ export type Winkel = 'muziek' | 'opnames';
 let open: Promise<IDBDatabase> | null = null;
 
 function database(): Promise<IDBDatabase> {
-  open ??= new Promise((ok, fout) => {
+  open ??= new Promise<IDBDatabase>((ok, fout) => {
     const verzoek = indexedDB.open(NAAM, VERSIE);
     verzoek.onupgradeneeded = () => {
       const db = verzoek.result;
       if (!db.objectStoreNames.contains('muziek')) db.createObjectStore('muziek', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('opnames')) db.createObjectStore('opnames', { keyPath: 'sleutel' });
     };
-    verzoek.onsuccess = () => ok(verzoek.result);
+    verzoek.onsuccess = () => {
+      const db = verzoek.result;
+      db.onversionchange = () => { db.close(); open = null; };
+      ok(db);
+    };
     verzoek.onerror = () => fout(verzoek.error);
-  });
+    verzoek.onblocked = () => fout(new Error('Sluit andere geopende versies van het spel en probeer opnieuw.'));
+  }).catch((error) => { open = null; throw error; });
   return open;
 }
 
@@ -40,7 +45,9 @@ export async function alles<T>(winkel: Winkel): Promise<T[]> {
 export async function bewaar(winkel: Winkel, waarde: unknown): Promise<boolean> {
   try {
     const db = await database();
-    await wacht(db.transaction(winkel, 'readwrite').objectStore(winkel).put(waarde));
+    const transactie = db.transaction(winkel, 'readwrite');
+    transactie.objectStore(winkel).put(waarde);
+    await wachtOpBewaren(transactie);
     return true;
   } catch {
     return false;
@@ -50,8 +57,18 @@ export async function bewaar(winkel: Winkel, waarde: unknown): Promise<boolean> 
 export async function verwijder(winkel: Winkel, sleutel: string): Promise<void> {
   try {
     const db = await database();
-    await wacht(db.transaction(winkel, 'readwrite').objectStore(winkel).delete(sleutel));
+    const transactie = db.transaction(winkel, 'readwrite');
+    transactie.objectStore(winkel).delete(sleutel);
+    await wachtOpBewaren(transactie);
   } catch {
     // niet erg
   }
+}
+
+function wachtOpBewaren(transactie: IDBTransaction): Promise<void> {
+  return new Promise((ok, fout) => {
+    transactie.oncomplete = () => ok();
+    transactie.onabort = () => fout(transactie.error ?? new Error('Het bewaren is afgebroken.'));
+    transactie.onerror = () => fout(transactie.error ?? new Error('Het bewaren is mislukt.'));
+  });
 }

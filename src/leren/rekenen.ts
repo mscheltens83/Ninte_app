@@ -133,9 +133,9 @@ export const TAFELSOMMEN: [number, number][] = [];
 for (let a = 2; a <= 10; a++) for (let b = 2; b <= 10; b++) TAFELSOMMEN.push([a, b]);
 
 /** Kies een tafelsom; sommen die vaak fout gaan komen vaker langs. */
-function kiesTafel(stats: WoordStats, rng: Rng, al: Set<string>): [number, number] {
+function kiesTafel(stats: WoordStats, rng: Rng, al: Set<string>, delen = false): [number, number] {
   const pool = TAFELSOMMEN.filter(([a, b]) => !al.has(`${a}x${b}`));
-  const gewichten = pool.map(([a, b]) => gewicht(stats[`${a}x${b}`]));
+  const gewichten = pool.map(([a, b]) => gewicht(stats[delen ? `${a * b}:${a}` : `${a}x${b}`]));
   let r = rng() * gewichten.reduce((x, y) => x + y, 0);
   for (let i = 0; i < pool.length; i++) {
     r -= gewichten[i];
@@ -156,7 +156,7 @@ export function kiesSommen(stats: WoordStats, rng: Rng = Math.random): Som[] {
     al.add(`${a}x${b}`);
     sommen.push(tafelSom(a, b, rng));
   }
-  const [da, db] = kiesTafel(stats, rng, al);
+  const [da, db] = kiesTafel(stats, rng, al, true);
   sommen.push(deelSom(da, db, rng));
   sommen.push(rng() < 0.5 ? plusSom(rng) : minSom(rng));
   sommen.push(nulSom(rng));

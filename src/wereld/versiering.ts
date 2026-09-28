@@ -100,6 +100,8 @@ interface Zweefding {
  * tekenopdracht voor duizenden deeltjes, zodat het op de iPad soepel blijft.
  */
 export class Effecten {
+  rustig = false;
+  zuinig = false;
   private mesh: THREE.InstancedMesh;
   private pos = new Float32Array(MAX_DEELTJES * 3);
   private vel = new Float32Array(MAX_DEELTJES * 3);
@@ -130,7 +132,9 @@ export class Effecten {
   }
 
   private spuit(p: THREE.Vector3, o: SpuitOpties) {
-    for (let n = 0; n < o.aantal; n++) {
+    if (this.rustig) return;
+    const aantal = this.zuinig ? Math.ceil(o.aantal / 4) : o.aantal;
+    for (let n = 0; n < aantal; n++) {
       const i = this.volgende;
       this.volgende = (this.volgende + 1) % MAX_DEELTJES;
       const i3 = i * 3;
@@ -218,6 +222,7 @@ export class Effecten {
 
   /** Vuurwerk: een paar pijlen die omhoog schieten en uit elkaar spatten. */
   vuurwerk(pos: THREE.Vector3, pijlen = 4) {
+    if (this.rustig || this.zuinig) return;
     const paletten = [
       ['#ff4d6d', '#ffb3c1', '#ffffff'],
       ['#ffd23f', '#fff1a8', '#ff9f1c'],
@@ -245,6 +250,7 @@ export class Effecten {
 
   /** Een ring die uitdijt en verdwijnt (bij een checkpoint of plons). */
   ring(pos: THREE.Vector3, kleur = '#ffffff', grootte = 3) {
+    if (this.rustig) return;
     const mesh = new THREE.Mesh(
       new THREE.RingGeometry(0.8, 1, 32),
       new THREE.MeshBasicMaterial({ color: kleur, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }),
@@ -257,6 +263,7 @@ export class Effecten {
   }
 
   hartjes(pos: THREE.Vector3, aantal = 5) {
+    if (this.rustig) return;
     this.hartMat ??= hartjesMateriaal();
     for (let i = 0; i < aantal; i++) {
       const sprite = new THREE.Sprite(this.hartMat);
