@@ -259,7 +259,7 @@ export class Geheimen {
     return nieuw;
   }
 
-  update(dt: number, speler: Lichaam): GeheimGebeurtenis[] {
+  update(dt: number, speler: Lichaam, interacties = true): GeheimGebeurtenis[] {
     this.tijd += dt;
     const uit: GeheimGebeurtenis[] = [];
     const p = speler.pos;
@@ -267,6 +267,7 @@ export class Geheimen {
       if (h.gevonden) continue;
       h.mesh.rotation.y += dt * 2.2;
       h.mesh.position.y = h.basisY + Math.sin(this.tijd * 2.5 + h.basisY) * 0.15;
+      if (!interacties) continue;
       const dx = h.mesh.position.x - p.x;
       const dz = h.mesh.position.z - p.z;
       const dy = h.mesh.position.y - (p.y + 1.2);
@@ -276,10 +277,14 @@ export class Geheimen {
         uit.push({ soort: 'hoefijzer', id: h.id, pos: h.mesh.position.clone() });
       }
     }
-    if (speler.opGrond && speler.grond === this.trampoline) uit.push({ soort: 'trampoline' });
-    if (this.binnenkomst(this.kistZone, speler) && !this.kistOpen) uit.push({ soort: 'kist' });
-    if (this.binnenkomst(this.eilandZone, speler)) uit.push({ soort: 'eilandje' });
-    if (this.binnenkomst(this.wolkZone, speler)) uit.push({ soort: 'wolkeneiland' });
+    // Een menu onderbreekt het spelen, maar geldt niet als weggaan uit een zone.
+    // Anders opent de gesloten kist direct opnieuw na de knop 'Later'.
+    if (interacties) {
+      if (speler.opGrond && speler.grond === this.trampoline) uit.push({ soort: 'trampoline' });
+      if (this.binnenkomst(this.kistZone, speler) && !this.kistOpen) uit.push({ soort: 'kist' });
+      if (this.binnenkomst(this.eilandZone, speler)) uit.push({ soort: 'eilandje' });
+      if (this.binnenkomst(this.wolkZone, speler)) uit.push({ soort: 'wolkeneiland' });
+    }
     if (this.kistOpen) this.kistDeksel.rotation.x += (-1.9 - this.kistDeksel.rotation.x) * Math.min(1, dt * 4);
     return uit;
   }

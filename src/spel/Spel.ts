@@ -551,7 +551,7 @@ export class Spel {
     } else {
       const weg = { ...this.speler, pos: { x: -999, y: -999, z: -999 } };
       for (const o of this.obbies) o.obby.update(dt, weg);
-      this.geheimen.update(dt, weg);
+      this.geheimen.update(dt, this.speler, false);
     }
     if (this.modus === 'spelen' || this.modus === 'scherm') {
       this.updateCamera(dt);
