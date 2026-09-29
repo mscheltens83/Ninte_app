@@ -27,6 +27,10 @@ import { Effecten } from '../wereld/versiering';
 import { Besturing } from './besturing';
 import { Fysica, type Lichaam } from './fysica';
 import { Avontuur } from '../avontuur/schermen';
+import { bouwVleugel } from '../avontuur/wereld';
+import { heeftVleugel } from '../avontuur/logica';
+import { pasZweefSnelheidAan } from '../avontuur/landschap';
+import { WERELD } from '../avontuur/inhoud';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
@@ -72,6 +76,8 @@ export class Spel {
     grond: null,
   };
   modus: Modus = 'titel';
+  zweeft=false;
+  private zweefModel=bouwVleugel();
   readonly seizoen: Seizoen | null = seizoenOp(new Date());
 
   private eiland: Eiland;
@@ -123,7 +129,7 @@ export class Spel {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.scene.background = new THREE.Color('#9ed8ff');
-    this.scene.fog = new THREE.Fog('#9ed8ff', 70, 230);
+    this.scene.fog = new THREE.Fog('#9ed8ff', 100, 390);
     this.scene.add(new THREE.HemisphereLight('#dff3ff', '#7cc35a', 1.6));
     this.zon = new THREE.DirectionalLight('#fff3dd', 2.4);
     this.zon.castShadow = true;
@@ -156,6 +162,7 @@ export class Spel {
     this.leven = new Leven(this.scene, this.effecten);
 
     this.avatar = new Avatar(stand.uiterlijk);
+    this.zweefModel.position.set(0,3,0);this.zweefModel.visible=false;this.avatar.groep.add(this.zweefModel);
     this.scene.add(this.avatar.groep);
     this.avatar.groep.position.copy(STARTPUNT);
     this.avatar.groep.rotation.y = this.kijkHoek;
@@ -543,7 +550,7 @@ export class Spel {
     if (this.bewaarTimer >= 15 && (this.modus === 'spelen' || this.dicteeActief)) { this.bewaarTimer = 0; bewaarStand(this.stand); }
     this.tijd += dt;
     this.besturing.update();
-    this.avontuur.update();
+    this.avontuur.update(dt);
 
     if (this.modus === 'titel') this.updateTitelCamera(dt);
     if (this.modus === 'kast') this.updateKastCamera(dt);
@@ -732,8 +739,7 @@ export class Spel {
     const rz = -cos * b.y - sin * b.x;
     const grip = s.opGrond ? 14 : 6;
     const k = Math.min(1, dt * grip);
-    s.snelheid.x += (rx * LOOPSNELHEID - s.snelheid.x) * k;
-    s.snelheid.z += (rz * LOOPSNELHEID - s.snelheid.z) * k;
+    if(!this.zweeft){s.snelheid.x += (rx * LOOPSNELHEID - s.snelheid.x) * k;s.snelheid.z += (rz * LOOPSNELHEID - s.snelheid.z) * k;}
 
     const wilSpringen = this.besturing.wilSpringen();
     if (wilSpringen) this.springBuffer = SPRING_BUFFER;
@@ -749,20 +755,30 @@ export class Spel {
     }
     this.springBuffer -= dt;
     s.snelheid.y = Math.max(s.snelheid.y - ZWAARTEKRACHT * dt, -32);
+    const wasZweven=this.zweeft;
+    if(!s.opGrond&&s.snelheid.y<0&&heeftVleugel(this.stand.avontuur)&&s.pos.y-this.avontuur.wereld.terreinHoogte(s.pos.x,s.pos.z)>3){this.zweeft=true;if(!wasZweven)this.avontuur.zweefStart(s.pos);}
+    if(this.zweeft){
+      const helpt=this.stand.avontuur.missies['toren-vlucht'].werk.verzameld.includes('start-toren');
+      pasZweefSnelheidAan(s,dt,rx,rz,helpt);
+    }
     const valSnelheid = s.snelheid.y;
     const wasOpGrond = s.opGrond;
     this.fysica.beweeg(s, dt);
+    if(this.zweeft&&s.opGrond){this.zweeft=false;this.avontuur.zweefLanding(s.pos);}
+    if(this.zweefModel.parent!==this.avatar.groep)this.avatar.groep.add(this.zweefModel);
+    this.zweefModel.visible=this.zweeft;
     // Stofwolkje bij een stevige landing
     if (!wasOpGrond && s.opGrond && valSnelheid < -9 && s.grond?.soort !== 'hooi') {
       this.effecten.stof(new THREE.Vector3(s.pos.x, s.pos.y + 0.1, s.pos.z), Math.min(1.6, -valSnelheid / 14));
     }
     this.wasOpGrond = s.opGrond;
 
-    if (Math.hypot(rx, rz) > 0.1) {
-      const doel = Math.atan2(rx, rz);
+    const richtingX=this.zweeft?s.snelheid.x:rx,richtingZ=this.zweeft?s.snelheid.z:rz;
+    if (Math.hypot(richtingX, richtingZ) > 0.1) {
+      const doel = Math.atan2(richtingX, richtingZ);
       let verschil = doel - this.kijkHoek;
       verschil = Math.atan2(Math.sin(verschil), Math.cos(verschil));
-      this.kijkHoek += verschil * Math.min(1, dt * 14);
+      this.kijkHoek += verschil * Math.min(1, dt * (this.zweeft?3:14));
     }
 
     // Een tijdje niks doen? Dan gaat Ninte dansen (een geheimpje).
@@ -820,6 +836,8 @@ export class Spel {
 
   /** Zet de speler ergens neer. Met `kijkHoek` kijken speler én camera die kant op. */
   zetSpeler(punt: THREE.Vector3 | { x: number; y: number; z: number }, kijkHoek?: number) {
+    if(this.zweeft){const s=this.stand.avontuur.missies['toren-vlucht'];if(s.status==='actief'){s.werk.verzameld=s.werk.verzameld.filter(x=>x!=='start-toren');s.stap=2;bewaarStand(this.stand);}}
+    this.zweeft=false;this.zweefModel.visible=false;
     if (kijkHoek !== undefined) {
       this.kijkHoek = kijkHoek;
       this.camYaw = kijkHoek + Math.PI;
@@ -897,10 +915,10 @@ export class Spel {
     const opEiland = (v: THREE.Vector3) => {
       if (s.z < -35) {
         const hz = this.avontuur.wereld.hutZ();
-        const opGeheim = s.z < -90 && this.stand.avontuur.gebieden.includes('boomhut');
-        v.x = THREE.MathUtils.clamp(v.x, opGeheim ? -10 : -33, opGeheim ? 10 : 33);
-        v.z = THREE.MathUtils.clamp(v.z, opGeheim ? hz-10 : -84, opGeheim ? hz+10 : -38);
-        v.y = 0;
+        const opGeheim = s.z < WERELD.noord-10 && this.stand.avontuur.gebieden.includes('boomhut');
+        v.x = THREE.MathUtils.clamp(v.x, opGeheim ? -10 : -WERELD.halfBreedte+2, opGeheim ? 10 : WERELD.halfBreedte-2);
+        v.z = THREE.MathUtils.clamp(v.z, opGeheim ? hz-10 : WERELD.noord+2, opGeheim ? hz+10 : -38);
+        v.y = opGeheim?0:this.avontuur.wereld.terreinHoogte(v.x,v.z);
         return v;
       }
       v.x = THREE.MathUtils.clamp(v.x, -grens, grens);

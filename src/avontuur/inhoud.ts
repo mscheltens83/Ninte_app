@@ -2,21 +2,29 @@
 export const ONDERWERPEN = ['bouwen', 'geld', 'lezen', 'breuken', 'programmeren', 'natuur'] as const;
 export type Onderwerp = typeof ONDERWERPEN[number];
 export type Niveau = 1 | 2 | 3;
-export type Gebied = 'dorp' | 'brug' | 'winkel' | 'bos' | 'pizza' | 'lab' | 'tuin' | 'boomhut';
+export type Gebied = 'dorp' | 'brug' | 'winkel' | 'bos' | 'pizza' | 'lab' | 'tuin' | 'boomhut' | 'toren';
 export const ONDERWERP_NAMEN: Record<Onderwerp, string> = {
   bouwen: 'Meten en bouwen', geld: 'Geld en hoeveelheden', lezen: 'Verhalen lezen',
   breuken: 'Breuken', programmeren: 'Robotroutes', natuur: 'Natuur onderzoeken',
 };
-export const GEBIEDEN: { id: Gebied; naam: string; icoon: string; kleur: string; x: number; z: number; bewoner: string; uitleg: string }[] = [
-  { id: 'dorp', naam: 'Dorpsplein', icoon: '🏡', kleur: '#e9b650', x: 0, z: -43, bewoner: 'Mila', uitleg: 'Begin hier. Help Mila met de dorpsvlag.' },
-  { id: 'brug', naam: 'Brug en geheim eiland', icoon: '🌉', kleur: '#a87242', x: 0, z: -83, bewoner: 'Bram', uitleg: 'Verzamel balken en maak de oversteek.' },
-  { id: 'winkel', naam: 'Dorpswinkel', icoon: '🛒', kleur: '#cf5692', x: -21, z: -51, bewoner: 'Sara', uitleg: 'Vul een mand en reken af zonder echt geld.' },
-  { id: 'bos', naam: 'Verhalenbos', icoon: '🌲', kleur: '#337d57', x: -21, z: -73, bewoner: 'Fien de vos', uitleg: 'Praat met de dieren en onderzoek hun aanwijzingen.' },
-  { id: 'pizza', naam: 'Pizzacafé', icoon: '🍕', kleur: '#c66b36', x: 21, z: -51, bewoner: 'Pip', uitleg: 'Maak bestellingen met gelijke pizzastukken.' },
-  { id: 'lab', naam: 'Uitvinderslab', icoon: '🤖', kleur: '#6565bd', x: 21, z: -73, bewoner: 'Luca', uitleg: 'Bouw een programma voor robot Ro.' },
-  { id: 'tuin', naam: 'Natuurtuin', icoon: '🌻', kleur: '#4d8636', x: 0, z: -71, bewoner: 'Noor', uitleg: 'Verzorg planten en meet hun groei.' },
-  { id: 'boomhut', naam: 'Jouw boomhut', icoon: '🌳', kleur: '#86704e', x: 0, z: -121, bewoner: 'Je eigen thuisplek', uitleg: 'Richt je boomhut in met verdiende spullen.' },
+export const GEBIEDEN: { id: Gebied; naam: string; icoon: string; kleur: string; x: number; y: number; z: number; bewoner: string; uitleg: string }[] = [
+  { id: 'dorp', naam: 'Dorpsplein', icoon: '🏡', kleur: '#e9b650', x: 0, y: 0, z: -60, bewoner: 'Mila', uitleg: 'Begin hier. Help Mila met de dorpsvlag.' },
+  { id: 'brug', naam: 'Brug en geheim eiland', icoon: '🌉', kleur: '#a87242', x: 0, y: 0, z: -230, bewoner: 'Bram', uitleg: 'Volg het noordelijke pad naar de rivier.' },
+  { id: 'winkel', naam: 'Dorpswinkel', icoon: '🛒', kleur: '#cf5692', x: -60, y: 0, z: -80, bewoner: 'Sara', uitleg: 'Westelijk van het dorp ligt Sara haar winkel.' },
+  { id: 'bos', naam: 'Verhalenbos', icoon: '🌲', kleur: '#337d57', x: -72, y: 4, z: -163, bewoner: 'De bosbewoners', uitleg: 'Volg de groene route naar de bosheuvel. Zoek Fien, Ubo en Kiki.' },
+  { id: 'pizza', naam: 'Pizzacafé', icoon: '🍕', kleur: '#c66b36', x: 60, y: 2, z: -82, bewoner: 'Pip', uitleg: 'Op het oostelijke terras vind je Pip en zijn pizzaoven.' },
+  { id: 'lab', naam: 'Uitvinderslab', icoon: '🤖', kleur: '#6565bd', x: 72, y: 6, z: -180, bewoner: 'Luca', uitleg: 'Het paarse pad klimt naar Luca zijn uitvindersheuvel.' },
+  { id: 'tuin', naam: 'Natuurtuin', icoon: '🌻', kleur: '#4d8636', x: 0, y: 2, z: -150, bewoner: 'Noor', uitleg: 'Volg de zonnebloemen naar Noor haar verhoogde tuin.' },
+  { id: 'boomhut', naam: 'Jouw boomhut', icoon: '🌳', kleur: '#86704e', x: 0, y: 0, z: -273, bewoner: 'Je eigen thuisplek', uitleg: 'Aan de overkant van de brug staat je boomhut.' },
+  { id: 'toren', naam: 'Windtoren', icoon: '🗼', kleur: '#5a9eae', x: 90, y: 0, z: -125, bewoner: 'Ravi', uitleg: 'Een toren van 90 meter! Verdien een zweefvleugel en ontdek het uitzicht.' },
 ];
+export const WERELD = { halfBreedte: 116, noord: -235, zuid: -35 } as const;
+export const TOREN = { x: 90, z: -125, hoogte: 90, bordessen: 10, stijging: 9, treden: 20, stap: .45, landing: { x: 27, y: 0, z: -121, straal: 10 } } as const;
+export const VLIEG_ONDERDELEN = [
+  { id: 'doek', naam: 'Sterk doek', gebied: 'winkel' as Gebied, x: -72, y: 0, z: -89, tip: 'Sara bewaarde het doek achter de winkel, bij roze bloemen.' },
+  { id: 'frame', naam: 'Licht frame', gebied: 'lab' as Gebied, x: 83, y: 6, z: -193, tip: 'Zoek op de labheuvel bij de paarse werkbank.' },
+  { id: 'lint', naam: 'Windlint', gebied: 'tuin' as Gebied, x: 12, y: 2, z: -161, tip: 'Noor legde het lint naast de zonnebloemen, achter in de tuin.' },
+] as const;
 
 export const DECORATIES = [
   { id: 'mat', naam: 'Welkommat', icoon: '🟨', kleur: '#e7bb59', gebruik: 'Een zachte plek bij je voordeur.' },
@@ -38,6 +46,8 @@ export const DECORATIES = [
   { id: 'bloem', naam: 'Zonnebloem', icoon: '🌻', kleur: '#efc957', gebruik: 'Je eigen gekweekte bloem.' },
   { id: 'pot', naam: 'Bloempot', icoon: '🏺', kleur: '#cc8668', gebruik: 'Een nieuwe pot voor je planten.' },
   { id: 'boom', naam: 'Miniboom', icoon: '🌱', kleur: '#6ca06b', gebruik: 'Een klein boompje voor je thuisplek.' },
+  { id: 'windvaan', naam: 'Windvaan', icoon: '🚩', kleur: '#63b3c2', gebruik: 'Een herinnering aan je zelfgebouwde zweefvleugel.' },
+  { id: 'wolkenlamp', naam: 'Wolkenlamp', icoon: '☁️', kleur: '#c4e9f2', gebruik: 'Je hoge vlucht krijgt een plek in je boomhut.' },
 ] as const;
 export type Decoratie = typeof DECORATIES[number]['id'];
 
@@ -45,9 +55,9 @@ export const BRUG_VARIANTEN = [
   { doel: 24, balk: 4 }, { doel: 18, balk: 3 }, { doel: 30, balk: 5 },
 ] as const;
 export const MATERIAALPLEKKEN = [
-  { id: 'werf', naam: 'Bram zijn houtwerf', x: -25, z: -43 },
-  { id: 'bosrand', naam: 'Hout bij het bos', x: -25, z: -63 },
-  { id: 'labkrat', naam: 'Krat naast het lab', x: 25, z: -63 },
+  { id: 'werf', naam: 'Bram zijn houtwerf', x: -43, y: 0, z: -101, gebied: 'winkel' as Gebied, tip: 'Zoek tussen de winkel en het eerste brugbord.' },
+  { id: 'bosrand', naam: 'Hout bij het bos', x: -88, y: 4, z: -173, gebied: 'bos' as Gebied, tip: 'Klim naar de bosheuvel en kijk tussen de bomen aan de westkant.' },
+  { id: 'labkrat', naam: 'Krat naast het lab', x: 82, y: 6, z: -175, gebied: 'lab' as Gebied, tip: 'Klim naar het lab. De krat staat rechts van het robotraster.' },
 ] as const;
 
 export interface WinkelOpdracht { prijzen: [number, number, number]; nodig: [number, number, number]; budget: number; betaald: number }
@@ -61,11 +71,11 @@ export const WINKEL_VARIANTEN: WinkelOpdracht[] = [
 ];
 
 export const BOS_BEWONERS = [
-  { id: 'vos', naam: 'Fien de vos', x: -27, z: -70,
+  { id: 'vos', naam: 'Fien de vos', x: -82, y: 4, z: -154,
     tekst: 'Ik zag een dier bij de blauwe bank. Het hield de sleutel in zijn poot. Ik zag een lange pluimstaart.' },
-  { id: 'uil', naam: 'Ubo de uil', x: -21, z: -78,
+  { id: 'uil', naam: 'Ubo de uil', x: -64, y: 4, z: -175,
     tekst: 'De eekhoorn en het konijn zaten eerst bij de boom. Het konijn ging daarna naar de vijver. De eekhoorn liep naar de blauwe bank.' },
-  { id: 'konijn', naam: 'Kiki het konijn', x: -15, z: -70,
+  { id: 'konijn', naam: 'Kiki het konijn', x: -60, y: 4, z: -153,
     tekst: 'Toen ik bij de vijver kwam, hoorde ik de eekhoorn roepen: ik heb de sleutel gevonden! Zij bleef bij de blauwe bank.' },
 ] as const;
 export const BOS_KEUZES = ['Eekhoorn bij de blauwe bank', 'Konijn bij de vijver', 'Uil bij de boom'];
@@ -94,12 +104,20 @@ export const ROBOT_ROUTES: RobotRoute[] = [
 ];
 export const PLANT_MODEL = { waterIdeaal: 2, lichtIdeaal: 2, groeiIdeaal: 3, groeiBijna: 1, startHoogte: 2 };
 
-export type MissieSoort = 'welkom' | 'brug' | 'hut' | 'aantallen' | 'budget' | 'wisselgeld' | 'sleutel' | 'volgorde' | 'woord' | 'verdelen' | 'bestelling' | 'gelijk' | 'route' | 'obstakel' | 'herhaal' | 'verzorgen' | 'vergelijken' | 'meten';
+export type MissieSoort = 'welkom' | 'brug' | 'hut' | 'aantallen' | 'budget' | 'wisselgeld' | 'sleutel' | 'volgorde' | 'woord' | 'verdelen' | 'bestelling' | 'gelijk' | 'route' | 'obstakel' | 'herhaal' | 'verzorgen' | 'vergelijken' | 'meten' | 'vleugel' | 'vlucht';
 export interface Missie {
   id: string; gebied: Gebied; onderwerp: Onderwerp; soort: MissieSoort;
   naam: string; verhaal: string; stappen: string[]; hints: [string, string, string]; beloning: Decoratie;
 }
 export const MISSIES: Missie[] = [
+  { id: 'toren-vleugel', gebied: 'toren', onderwerp: 'bouwen', soort: 'vleugel', naam: 'Maak je zweefvleugel',
+    verhaal: 'Ravi: Eerst maken we een veilige vleugel. Zoek doek, een frame en windlint. Kies daarna twee even zware kanten: samen zes blokjes.',
+    stappen: ['Praat met Ravi bij de toren.', 'Zoek drie onderdelen in de wereld.', 'Kies een vleugel die in evenwicht is.'],
+    hints: ['Elke kant moet even zwaar zijn.', '🪽 Links drie blokjes · rechts drie blokjes. 3 + 3 = 6.', 'Links 3 en rechts 3 werkt: beide kanten wegen evenveel en samen zijn het 6 blokjes. 2 en 4 is scheef. Daarna mag je de vleugel bij de toren pakken.'], beloning: 'windvaan' },
+  { id: 'toren-vlucht', gebied: 'toren', onderwerp: 'bouwen', soort: 'vlucht', naam: 'Zweef naar de bloemenweide',
+    verhaal: 'Ravi: Pak je verdiende zweefvleugel. Klim naar het dak van 90 meter. Loop naar de open rand van het blauwe vliegdek en spring naar de grote bloemencirkel.',
+    stappen: ['Praat met Ravi.', 'Pak de zweefvleugel bij de toren.', 'Klim via de trappen naar het dak.', 'Spring van het blauwe vliegdek.', 'Land in de bloemencirkel.'],
+    hints: ['Volg de trappen. Op ieder bordes onthouden we hoe hoog je kwam.', '🗼 Dak → 🪽 spring → 🌼 bloemencirkel. De vleugel opent vanzelf; WASD of de joystick stuurt.', 'Zonder stuurinvoer helpt de vleugel je richting de bloemenweide. Ze daalt rustig. Je verliest geen spullen bij een andere landing en kunt de lift naar je hoogste bordes gebruiken.'], beloning: 'wolkenlamp' },
   { id: 'welkom', gebied: 'dorp', onderwerp: 'bouwen', soort: 'welkom', naam: 'De vlag voor het dorp',
     verhaal: 'Mila: Welkom! De dorpsvlag ligt naast de gele kist. Wil jij hem ophalen en op het plein zetten?',
     stappen: ['Praat met Mila.', 'Haal de vlag bij de gele kist.', 'Plaats de vlag op het plein.'],

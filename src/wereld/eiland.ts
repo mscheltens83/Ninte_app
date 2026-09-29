@@ -7,7 +7,7 @@ import { WACHTWOORD } from './geheimen';
 
 export const EILAND_RAND = 35; // gras loopt van -35 tot 35
 export const WATER_HOOGTE = -0.7;
-export const STARTPUNT = new THREE.Vector3(0, 0, -43);
+export const STARTPUNT = new THREE.Vector3(3, 0, -53);
 
 export interface Eiland {
   groep: THREE.Group;

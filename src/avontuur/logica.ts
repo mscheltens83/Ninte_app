@@ -1,4 +1,4 @@
-import { BOS_BEWONERS, BOS_OPLOSSINGEN, BRUG_VARIANTEN, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, ONDERWERPEN, PIZZA_INSTELLINGEN, PLANT_MODEL, ROBOT_ROUTES, TUIN_DAGEN, WINKEL_MANDEN, WINKEL_VARIANTEN, missieMetId,
+import { BOS_BEWONERS, BOS_OPLOSSINGEN, BRUG_VARIANTEN, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, ONDERWERPEN, PIZZA_INSTELLINGEN, PLANT_MODEL, ROBOT_ROUTES, TUIN_DAGEN, WINKEL_MANDEN, WINKEL_VARIANTEN, VLIEG_ONDERDELEN, TOREN, missieMetId,
   type Decoratie, type Gebied, type Missie, type Niveau, type Onderwerp, type RobotBlok, type RobotRoute } from './inhoud';
 
 export type MissieStatus = 'beschikbaar' | 'actief' | 'voltooid';
@@ -15,7 +15,7 @@ export interface Inrichting { id: number; item: Decoratie; x: number; z: number;
 export interface AvontuurStand {
   versie: 1; missies: Record<string, MissieStand>; actief: string | null; beloningen: string[];
   decoraties: Decoratie[]; inrichting: Inrichting[]; volgendeId: number; gebieden: Gebied[];
-  niveaus: Record<Onderwerp, Niveau>; onderwerpen: Onderwerp[]; huidigGebied: Gebied;
+  niveaus: Record<Onderwerp, Niveau>; onderwerpen: Onderwerp[]; huidigGebied: Gebied; ontdekt: Gebied[];
 }
 export const HUT_BREEDTE = 8, HUT_DIEPTE = 6;
 export function leegWerk(): Werk {
@@ -25,7 +25,7 @@ export function leegWerk(): Werk {
 export function nieuwAvontuur(): AvontuurStand {
   return { versie: 1, missies: Object.fromEntries(MISSIES.map(m => [m.id, { status: 'beschikbaar', stap: 0, niveau: 1, pogingen: 0, hint: 0, werk: leegWerk() }])),
     actief: null, beloningen: [], decoraties: [], inrichting: [], volgendeId: 1,
-    gebieden: GEBIEDEN.filter(g => g.id !== 'boomhut').map(g => g.id),
+    gebieden: GEBIEDEN.filter(g => g.id !== 'boomhut').map(g => g.id), ontdekt: ['dorp'],
     niveaus: { bouwen: 1, geld: 1, lezen: 1, breuken: 1, programmeren: 1, natuur: 1 }, onderwerpen: [...ONDERWERPEN], huidigGebied: 'dorp' };
 }
 export function magBeginnen(a: AvontuurStand, m: Missie): boolean {
@@ -57,10 +57,10 @@ export function ontdekHut(a: AvontuurStand): boolean {
 export function verzamel(a: AvontuurStand, id: string, bron: string): boolean {
   const m = missieMetId(id); if (!m || !beginMissie(a, id)) return false;
   const s = a.missies[id];
-  const geldig = id === 'brug' ? MATERIAALPLEKKEN.some(p => p.id === bron) : id === 'welkom' && bron === 'vlag';
+  const geldig = id === 'brug' ? MATERIAALPLEKKEN.some(p => p.id === bron) : id === 'toren-vleugel' ? VLIEG_ONDERDELEN.some(p=>p.id===bron) : id === 'welkom' && bron === 'vlag';
   if (!geldig || s.werk.verzameld.includes(bron)) return false;
   s.werk.verzameld.push(bron);
-  if ((id === 'brug' && s.werk.verzameld.length === 3) || id === 'welkom') s.stap = 2;
+  if ((['brug','toren-vleugel'].includes(id) && s.werk.verzameld.length === 3) || id === 'welkom') s.stap = 2;
   return true;
 }
 export function leesAanwijzing(a: AvontuurStand, bewoner: string): boolean {
@@ -70,6 +70,28 @@ export function leesAanwijzing(a: AvontuurStand, bewoner: string): boolean {
   return true;
 }
 export function brugMaten(a: AvontuurStand) { return BRUG_VARIANTEN[a.missies.brug.niveau - 1]; }
+export function ontdekGebied(a:AvontuurStand,g:Gebied):boolean {if(!a.gebieden.includes(g)||a.ontdekt.includes(g))return false;a.ontdekt.push(g);a.huidigGebied=g;return true;}
+export function heeftVleugel(a:AvontuurStand):boolean {return a.missies['toren-vleugel'].status==='voltooid'&&a.missies['toren-vlucht'].werk.verzameld.includes('zweefvleugel');}
+export function pakVleugel(a:AvontuurStand):boolean {
+  if(a.missies['toren-vleugel'].status!=='voltooid'||!beginMissie(a,'toren-vlucht'))return false;
+  const s=a.missies['toren-vlucht'];if(!s.werk.verzameld.includes('zweefvleugel'))s.werk.verzameld.push('zweefvleugel');s.stap=Math.max(2,s.stap);return true;
+}
+export function hoogsteBordes(a:AvontuurStand):number {return Math.max(0,...a.missies['toren-vlucht'].werk.verzameld.filter(x=>/^bordes-\d+$/.test(x)).map(x=>Number(x.split('-')[1])));}
+export function noteerBordes(a:AvontuurStand,p:{x:number;y:number;z:number}):boolean {
+  if(!heeftVleugel(a)||Math.abs(p.x-TOREN.x)>14||Math.abs(p.z-TOREN.z)>10)return false;
+  const n=Math.min(TOREN.bordessen,Math.floor((p.y+.05)/TOREN.stijging));if(n<=hoogsteBordes(a))return false;
+  const s=a.missies['toren-vlucht'];s.werk.verzameld.push(`bordes-${n}`);if(n===TOREN.bordessen&&s.status==='actief')s.stap=3;return true;
+}
+export function startTorenVlucht(a:AvontuurStand,p:{x:number;y:number;z:number}):boolean {
+  const s=a.missies['toren-vlucht'];if(!heeftVleugel(a)||s.status!=='actief'||p.y<TOREN.hoogte-1||Math.hypot(p.x-TOREN.x,p.z-TOREN.z)>29)return false;
+  if(s.werk.verzameld.includes('start-toren'))return false;s.werk.verzameld.push('start-toren');s.stap=4;a.actief='toren-vlucht';return true;
+}
+export function landTorenVlucht(a:AvontuurStand,p:{x:number;y:number;z:number}):{goed:boolean;tekst:string}|null {
+  const s=a.missies['toren-vlucht'];if(s.status!=='actief'||!s.werk.verzameld.includes('start-toren'))return null;
+  if(Math.abs(p.y-TOREN.landing.y)<.6&&Math.hypot(p.x-TOREN.landing.x,p.z-TOREN.landing.z)<=TOREN.landing.straal){s.werk.verzameld.push('landing');return controleerMissie(a,'toren-vlucht');}
+  s.werk.verzameld=s.werk.verzameld.filter(x=>x!=='start-toren');s.stap=2;
+  return {goed:false,tekst:'Veilig geland! De bloemencirkel ligt ergens anders. Je vleugel blijft van jou. Probeer opnieuw vanaf je hoogste bordes.'};
+}
 export function plaatsBalk(a: AvontuurStand, verwijderen = false): boolean {
   const s = a.missies.brug, { doel, balk } = brugMaten(a);
   if (s.status !== 'actief' || s.stap !== 2) return false;
@@ -161,6 +183,8 @@ export function controleerMissie(a: AvontuurStand, id: string): { goed: boolean;
   const w = s.werk;
   let goed = false, tekst = 'Bijna! Bekijk je opdracht of vraag een hint. Je kunt veilig opnieuw proberen.';
   switch (m.soort) {
+    case 'vleugel': goed=w.verzameld.length===3&&w.keuze==='0';tekst='Zoek eerst alle drie de onderdelen. Kies daarna twee even zware kanten die samen zes blokjes zijn.';break;
+    case 'vlucht': goed=heeftVleugel(a)&&w.verzameld.includes('start-toren')&&w.verzameld.includes('landing');tekst='Deze opdracht doe je in de wereld: pak je vleugel, klim naar het dak en land in de bloemencirkel.';break;
     case 'welkom': goed = s.stap === 2 && w.verzameld.includes('vlag'); break;
     case 'brug': { const b = brugMaten(a); goed = s.stap === 2 && w.balken * b.balk === b.doel; tekst = `Je brug is ${w.balken * b.balk} meter. Maak hem precies ${b.doel} meter. Verwijderen kan ook.`; break; }
     case 'hut': goed = a.inrichting.length > 0; break;
@@ -228,7 +252,7 @@ export function valideerAvontuur(data: unknown): { stand: AvontuurStand; aangepa
     else if (doel.status === 'beschikbaar') doel.stap = 0;
     else if (doel.stap === 0 || doel.stap >= m.stappen.length) { doel.stap = 1; aangepast = true; }
     const d = doel.werk;
-    d.verzameld = lijst(w.verzameld, m.id === 'brug' ? MATERIAALPLEKKEN.map(p => p.id) : ['vlag']);
+    d.verzameld = lijst(w.verzameld, m.id === 'brug' ? MATERIAALPLEKKEN.map(p => p.id) : m.soort==='vleugel'?VLIEG_ONDERDELEN.map(p=>p.id):m.soort==='vlucht'?['zweefvleugel','start-toren','landing',...Array.from({length:10},(_,i)=>`bordes-${i+1}`)]:['vlag']);
     d.gelezen = lijst(w.gelezen, BOS_BEWONERS.map(b => b.id));
     d.balken = num(w.balken, 0, 7); d.keuze = text(w.keuze); d.antwoord = text(w.antwoord); d.verdeling = num(w.verdeling, 0, 8);
     if (Array.isArray(w.mand) && w.mand.length === 3) d.mand = w.mand.map(v => num(v, 0, 20)) as Werk['mand']; else if (w.mand !== undefined) aangepast = true;
@@ -245,6 +269,7 @@ export function valideerAvontuur(data: unknown): { stand: AvontuurStand; aangepa
     if (doel.status === 'actief' && m.id === 'brug') doel.stap = d.verzameld.length === 3 ? 2 : 1;
     if (doel.status === 'actief' && m.id === 'welkom') doel.stap = d.verzameld.includes('vlag') ? 2 : 1;
     if (doel.status === 'actief' && m.id === 'bos-sleutel') doel.stap = d.gelezen.length === 3 ? 2 : 1;
+    if (doel.status === 'actief' && m.soort === 'vleugel') doel.stap = d.verzameld.length === 3 ? 2 : 1;
     if (doel.status === 'voltooid' && m.id === 'brug') {
       const b=BRUG_VARIANTEN[doel.niveau-1];
       if(d.balken!==b.doel/b.balk || d.verzameld.length!==3){d.balken=b.doel/b.balk;d.verzameld=MATERIAALPLEKKEN.map(p=>p.id);aangepast=true;}
@@ -256,6 +281,9 @@ export function valideerAvontuur(data: unknown): { stand: AvontuurStand; aangepa
   uit.decoraties = lijst(r.decoraties, DECORATIES.map(d => d.id));
   for (const m of klaar) if (!uit.decoraties.includes(m.beloning)) uit.decoraties.push(m.beloning);
   if (uit.missies.brug.status === 'voltooid') { uit.gebieden.push('boomhut'); for (const d of ['mat','kruk','plant'] as const) if (!uit.decoraties.includes(d)) uit.decoraties.push(d); }
+  // Ontdekking is nieuw: eerder gespeelde gebieden blijven voor bestaande spelers bereikbaar.
+  uit.ontdekt=lijst(r.ontdekt,GEBIEDEN.map(g=>g.id),['dorp',...new Set(MISSIES.filter(m=>uit.missies[m.id].status!=='beschikbaar').map(m=>m.gebied))]);
+  uit.ontdekt=uit.ontdekt.filter(g=>uit.gebieden.includes(g));if(!uit.ontdekt.includes('dorp'))uit.ontdekt.unshift('dorp');
   const actief = typeof r.actief === 'string' && MISSIES.some(m => m.id === r.actief && uit.missies[m.id].status === 'actief') ? r.actief : null;
   uit.actief = actief; uit.huidigGebied = GEBIEDEN.some(g => g.id === r.huidigGebied && uit.gebieden.includes(g.id)) ? r.huidigGebied as Gebied : 'dorp';
   if (Array.isArray(r.inrichting) && r.inrichting.length <= DECORATIES.length) {

@@ -2,11 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { Fysica, type Lichaam } from '../src/spel/fysica';
-import { nieuwAvontuur, beginMissie, verzamel, plaatsBalk, controleerMissie, plaatsDecoratie, ontdekHut, leesAanwijzing } from '../src/avontuur/logica';
+import { nieuwAvontuur, beginMissie, verzamel, plaatsBalk, controleerMissie, plaatsDecoratie, ontdekHut, leesAanwijzing, pakVleugel } from '../src/avontuur/logica';
 import { AvontuurWereld, BRUG_START } from '../src/avontuur/wereld';
 import { Avontuur, pizzaSvg } from '../src/avontuur/schermen';
-import { nieuweStand } from '../src/opslag/opslag';
-import { MISSIES, ROBOT_ROUTES, GEBIEDEN, LEES_STEUN, TUIN_DAGEN } from '../src/avontuur/inhoud';
+import { nieuweStand, valideerStand, laadStand } from '../src/opslag/opslag';
+import { MISSIES, ROBOT_ROUTES, GEBIEDEN, LEES_STEUN, TUIN_DAGEN, VLIEG_ONDERDELEN, TOREN } from '../src/avontuur/inhoud';
 import type { Spel } from '../src/spel/Spel';
 vi.mock('../src/wereld/bouwstenen',async origineel=>{
   const actual=await origineel<typeof import('../src/wereld/bouwstenen')>();
@@ -14,8 +14,8 @@ vi.mock('../src/wereld/bouwstenen',async origineel=>{
 });
 vi.mock('../src/leren/voorlezen',()=>({spreek:vi.fn()}));
 beforeEach(()=>{document.body.innerHTML='<div id="schermen"></div><div id="hud"><div id="knoppen-rechts"></div></div><div id="vlak"></div>';localStorage.clear();});
-function fixture(){
-  const stand=nieuweStand();const spel={scene:new THREE.Scene(),fysica:new Fysica(),modus:'spelen',speler:{pos:{x:0,y:0,z:-43}},hud:{hud:document.getElementById('hud')!,meld:vi.fn(),toonBanner:vi.fn()},
+function fixture(ontdekt=true){
+  const stand=nieuweStand();if(ontdekt)stand.avontuur.ontdekt=[...stand.avontuur.gebieden];const spel={scene:new THREE.Scene(),fysica:new Fysica(),modus:'spelen',speler:{pos:{x:3,y:0,z:-53}},hud:{hud:document.getElementById('hud')!,meld:vi.fn(),toonBanner:vi.fn()},
     pauzeer:vi.fn(),hervat:vi.fn(),zetSpeler:vi.fn(),geluid:{aan:false},muziek:{zetAan:vi.fn()},pasKwaliteitAan:vi.fn()} as unknown as Spel;
   const av=new Avontuur(spel,stand);return {stand,spel,av};
 }
@@ -55,7 +55,7 @@ describe('werkende missieinterfaces',()=>{
     vi.useFakeTimers();const {av,stand}=fixture();av.toonMissie('lab-route');for(let i=0;i<3;i++)click('[data-robot="vooruit"]');click('[data-robot="interactie"]');click('[data-run]');
     click('[data-sluit]');vi.runAllTimers();expect(stand.avontuur.missies['lab-route'].status).toBe('actief');vi.useRealTimers();
   });
-  it('speelt alle 18 missies via de gekoppelde controllers en knoppen uit',()=>{
+  it('speelt alle 20 missies via de gekoppelde controllers en knoppen uit',()=>{
     vi.useFakeTimers();const {av,stand}=fixture();const a=stand.avontuur;
     av.toonMissie('welkom');verzamel(a,'welkom','vlag');av.toonMissie('welkom');click('[data-plaatsvlag]');
     for(const p of ['werf','bosrand','labkrat'])verzamel(a,'brug',p);av.toonMissie('brug');for(let i=0;i<6;i++)click('[data-balk]');click('[data-controleer]');
@@ -79,7 +79,11 @@ describe('werkende missieinterfaces',()=>{
       click('[data-dag]');if(id==='tuin-meten'){click('[data-dag]');const input=document.querySelector<HTMLInputElement>('[data-antwoord]')!;input.value='6';input.dispatchEvent(new Event('input'));}
       if(id==='tuin-vergelijken')click('[data-plantkeuze="a"]');click('[data-controleer]');
     }
-    expect(MISSIES.map(m=>[m.id,a.missies[m.id].status])).toEqual(MISSIES.map(m=>[m.id,'voltooid']));expect(a.beloningen).toHaveLength(18);vi.useRealTimers();
+    av.toonMissie('toren-vleugel');for(const p of VLIEG_ONDERDELEN)verzamel(a,'toren-vleugel',p.id);av.toonMissie('toren-vleugel');click('[data-keuze="0"]');click('[data-controleer]');
+    expect(pakVleugel(a)).toBe(true);av.zweefStart({x:TOREN.x-22,y:90,z:TOREN.z});av.zweefLanding(TOREN.landing);
+    expect(MISSIES.map(m=>[m.id,a.missies[m.id].status])).toEqual(MISSIES.map(m=>[m.id,'voltooid']));expect(a.beloningen).toHaveLength(20);
+    expect(valideerStand(JSON.parse(JSON.stringify(stand))).aangepast).toBe(false);
+    expect(laadStand().avontuur.missies['toren-vlucht'].status).toBe('voltooid');vi.useRealTimers();
   });
   it('verandert de robotvolgorde, stopt en reset zonder vastlopende timers',()=>{
     vi.useFakeTimers();const {av,stand}=fixture();av.toonMissie('lab-route');click('[data-robot="vooruit"]');click('[data-robot="rechts"]');click('[data-blokactie="omhoog"][data-index="1"]');
@@ -87,7 +91,7 @@ describe('werkende missieinterfaces',()=>{
     expect(document.querySelector('[data-robotstatus]')!.textContent).toContain('startplek');click('[data-leeg]');expect(stand.avontuur.missies['lab-route'].werk.programma).toEqual([]);vi.useRealTimers();
   });
   it('weigert reset zonder bewuste bevestiging en bewaart instellingen per onderwerp',()=>{
-    const {av,stand}=fixture();av.toonOuderAvonturen(vi.fn());click('[data-reset]');expect(stand.avontuur).toEqual(nieuwAvontuur());expect(document.body.textContent).toContain('Typ precies OPNIEUW');
+    const {av,stand}=fixture(false);av.toonOuderAvonturen(vi.fn());click('[data-reset]');expect(stand.avontuur).toEqual(nieuwAvontuur());expect(document.body.textContent).toContain('Typ precies OPNIEUW');
     const input=document.querySelector<HTMLInputElement>('[data-onderwerp="geld"]')!;input.checked=false;const niveau=document.querySelector<HTMLSelectElement>('[data-niveau="breuken"]')!;niveau.value='3';click('[data-ouderbewaar]');
     expect(stand.avontuur.onderwerpen).not.toContain('geld');expect(stand.avontuur.niveaus.breuken).toBe(3);
   });
@@ -127,12 +131,12 @@ describe('echte wereldgeometrie en fysica',()=>{
   });
   it('bouwt herstelde inrichting zichtbaar op dezelfde coördinaten',()=>{
     const a=nieuwAvontuur();beginMissie(a,'brug');for(const p of ['werf','bosrand','labkrat'])verzamel(a,'brug',p);for(let i=0;i<6;i++)plaatsBalk(a);controleerMissie(a,'brug');ontdekHut(a);plaatsDecoratie(a,'plant',2,1);
-    const w=new AvontuurWereld(new THREE.Scene(),new Fysica(),a);expect(w.meubels.children[0].position.x).toBe(-1.5);expect(w.meubels.children[0].position.z).toBe(-1.5);expect(w.hutZ()).toBe(-122);
+    const w=new AvontuurWereld(new THREE.Scene(),new Fysica(),a);expect(w.meubels.children[0].position.x).toBe(-1.5);expect(w.meubels.children[0].position.z).toBe(-1.5);expect(w.hutZ()).toBe(BRUG_START-24-12);
   });
   it('houdt alle reisplekken bereikbaar, droog en dicht bij een interactie',()=>{
     const a=nieuwAvontuur(),f=new Fysica(),w=new AvontuurWereld(new THREE.Scene(),f,a);
     for(const g of GEBIEDEN.filter(g=>g.id!=='boomhut')){
-      const p=w.reisPunt(g.id),s:Lichaam={pos:{...p,y:.3},snelheid:{x:0,y:-2,z:0},straal:.4,hoogte:2.5,opGrond:false,grond:null};
+      const p=w.reisPunt(g.id),s:Lichaam={pos:{...p,y:p.y+.3},snelheid:{x:0,y:-2,z:0},straal:.4,hoogte:2.5,opGrond:false,grond:null};
       f.beweeg(s,.5);expect(s.pos.y,`Droge reisplek ${g.id}`).toBeGreaterThanOrEqual(0);expect(w.dichtst(p),`Interactie bij ${g.id}`).toBeDefined();
     }
   });

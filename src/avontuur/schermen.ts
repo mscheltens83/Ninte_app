@@ -2,13 +2,15 @@ import { veilig } from '../ui/hud';
 import { sluitScherm, toon } from '../ui/schermen';
 import { spreek } from '../leren/voorlezen';
 import { bewaarStand, type Spelstand } from '../opslag/opslag';
-import { BOS_BEWONERS, BOS_KEUZES, BOS_EXTRA_KEUZES, LEES_STEUN, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, ONDERWERPEN, ONDERWERP_NAMEN, PRODUCTEN, PRODUCT_EENHEDEN, VOLGORDE_KEUZES, VOLGORDE_TEKST, WOORD_KEUZES, WOORD_TEKST, missieVoorNiveau,
+import { BOS_BEWONERS, BOS_KEUZES, BOS_EXTRA_KEUZES, LEES_STEUN, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, ONDERWERPEN, ONDERWERP_NAMEN, PRODUCTEN, PRODUCT_EENHEDEN, VOLGORDE_KEUZES, VOLGORDE_TEKST, WOORD_KEUZES, WOORD_TEKST, missieVoorNiveau, TOREN, VLIEG_ONDERDELEN,
   type Decoratie, type Gebied, type Missie, type Onderwerp, type RobotActie } from './inhoud';
-import { beginMissie, brugMaten, controleerMissie, ontdekHut, euro, HUT_BREEDTE, HUT_DIEPTE, leegWerk, leesAanwijzing, magBeginnen, mandTotaal, nieuwAvontuur,
+import { beginMissie, brugMaten, controleerMissie, ontdekHut, euro, HUT_BREEDTE, HUT_DIEPTE, leegWerk, leesAanwijzing, magBeginnen, mandTotaal, nieuwAvontuur, ontdekGebied, pakVleugel, heeftVleugel, hoogsteBordes, noteerBordes, startTorenVlucht, landTorenVlucht,
   pizzaDoel, pizzaEenheden, plaatsBalk, plaatsDecoratie, robotRoute, robotStap, robotStart, terugleggen, tuinDag, vrijeTegel, vouwProgramma, winkelOpdracht, verzamel,
   type AvontuurStand, type MissieStand, type PizzaStuk, type RobotStand } from './logica';
 import { AvontuurWereld, type Interactie } from './wereld';
 import type { Spel } from '../spel/Spel';
+import { bordesPunt } from './landschap';
+import type { Vec3 } from '../spel/fysica';
 
 const knop = (tekst:string,attrs='') => `<button class="knop klein" ${attrs}>${tekst}</button>`;
 const smaken = { kaas:'#edbf42',tomaat:'#d66752' };
@@ -35,6 +37,7 @@ export class Avontuur {
   private laatsteTaak='';
   private laatstDichtbij='';
   private opAfsluiten:(()=>void)|null=null;
+  private bestemming:{naam:string;punt:Vec3}|null=null;
   aanHetOefenen=false;
   get a():AvontuurStand{return this.stand.avontuur;}
   constructor(private spel:Spel,private stand:Spelstand) {
@@ -50,14 +53,19 @@ export class Avontuur {
     });
     this.bewaar(false);
   }
-  update() {
+  update(dt=.016) {
     const spelen=this.spel.modus==='spelen';this.interactieKnop.hidden=!spelen;
+    const p=this.spel.speler.pos;this.wereld.update(dt,p,this.spel.camera?.position,spelen);
     if(!spelen)return;
+    for(const g of GEBIEDEN){const q=this.wereld.reisPunt(g.id);if(Math.hypot(p.x-q.x,p.z-q.z)<16&&Math.abs(p.y-q.y)<2.5&&ontdekGebied(this.a,g.id)){this.bewaar();this.spel.hud.toonBanner(`${g.icoon} ${g.naam} ontdekt! Je kunt hier voortaan snel naartoe reizen.`,null,{duur:4500});}}
+    if(noteerBordes(this.a,p)){this.bewaar();this.spel.hud.toonBanner(`🗼 ${hoogsteBordes(this.a)*9} meter bereikt! De lift onthoudt dit bordes.`,null,{duur:3500});}
+    if(this.bestemming&&Math.hypot(p.x-this.bestemming.punt.x,p.z-this.bestemming.punt.z)<7&&Math.abs(p.y-this.bestemming.punt.y)<3){this.bestemming=null;this.wereld.markeerRoute(null);}
     this.dichtbij=this.wereld.dichtst(this.spel.speler.pos);
     this.interactieKnop.hidden=!this.dichtbij;
     if(this.dichtbij?.id!==this.laatstDichtbij){this.laatstDichtbij=this.dichtbij?.id??'';this.interactieKnop.textContent=this.dichtbij?`${this.dichtbij.naam} · E / tik`:'';}
     const m=missie(this.a.actief,this.a),s=m?this.a.missies[m.id]:null;
-    const tekst=m&&s?`${GEBIEDEN.find(g=>g.id===m.gebied)!.icoon} ${m.stappen[s.stap]} · Hulp`:'📖 Kies een avontuur · opdrachten en hulp';
+    const route=this.bestemming?` · 🧭 ${this.bestemming.naam}: ${Math.round(Math.hypot(p.x-this.bestemming.punt.x,p.z-this.bestemming.punt.z))} m ${richting(p,this.bestemming.punt)}`:'';
+    const tekst=(m&&s?`${GEBIEDEN.find(g=>g.id===m.gebied)!.icoon} ${m.stappen[s.stap]} · Hulp`:'📖 Kies een avontuur · opdrachten en hulp')+route+(this.spel.zweeft?` · 🪽 ${Math.round(p.y)} m · stuur met WASD / joystick`: '');
     if(tekst!==this.laatsteTaak){this.taakKnop.textContent=tekst;this.laatsteTaak=tekst;}
   }
   stop(){this.uitvoering++;this.aanHetOefenen=false;this.huidigScherm=null;this.opAfsluiten=null;}
@@ -77,6 +85,8 @@ export class Avontuur {
   interactie() {
     if(this.spel.modus!=='spelen'||!this.dichtbij)return;
     const i=this.dichtbij;
+    if(i.soort==='onderdeel'){const goed=verzamel(this.a,'toren-vleugel',i.id);this.bewaar();this.spel.hud.toonBanner(goed?`🪽 Onderdeel gevonden! ${this.a.missies['toren-vleugel'].werk.verzameld.length}/3. Bekijk je opdracht voor de volgende aanwijzing.`:'Dit onderdeel is al gevonden, of bouwen staat uit bij Voor ouders.',null,{duur:5000});return;}
+    if(i.soort==='vleugel'){const ok=pakVleugel(this.a);this.bewaar();this.spel.hud.toonBanner(ok?'🪽 Je vleugel is van jou! Klim via de trappen naar het vliegdek. Ze opent vanzelf als je van grote hoogte springt.':heeftVleugel(this.a)?'Je zweefvleugel blijft van jou. Klim gerust nog eens naar het dak.':'Help Ravi eerst: zoek de drie onderdelen en maak de vleugel in evenwicht.',null,{duur:6000});return;}
     if(i.soort==='materiaal'||i.soort==='vlag'){
       const id=i.soort==='vlag'?'welkom':'brug',goed=verzamel(this.a,id,i.id);this.bewaar();
       this.spel.hud.toonBanner(goed?(id==='welkom'?'🎏 De vlag zit in je tas. Breng hem naar Mila!':`🪵 Drie balken in je tas! ${this.a.missies.brug.werk.verzameld.length}/3 plekken bezocht.`):'Dit materiaal zit al in je tas, of het onderwerp staat uit bij Voor ouders.',null,{duur:5500});
@@ -87,30 +97,36 @@ export class Avontuur {
     this.toonGebied(i.gebied!);
   }
   toonKaart() {
-    const s=this.scherm('🗺️ Kies een plek',`<p>Volg de gekleurde paden of reis meteen. Je kunt altijd terug naar het dorp.</p><div class="gebieden">${GEBIEDEN.map(g=>`<article style="--gebied:${g.kleur}"><h3>${g.icoon} ${g.naam}</h3><p>${veilig(g.uitleg)}</p>${knop(this.a.gebieden.includes(g.id)?'Reis hierheen':'Bouw eerst de brug',`data-reis="${g.id}" ${this.a.gebieden.includes(g.id)?'':'disabled'}`)}</article>`).join('')}</div>${knop('🐴 Dieren en oude obby’s','data-oud')}`);
+    const s=this.scherm('🗺️ Kies een plek',`<p>Ontdek nieuwe plekken door te lopen. Volg de gekleurde paden en het gouden baken. Na je eerste bezoek kun je snel terugreizen.</p><div class="gebieden">${GEBIEDEN.map(g=>`<article style="--gebied:${g.kleur}"><h3>${g.icoon} ${g.naam}</h3><p>${veilig(g.uitleg)}</p><p class="klein">${this.a.ontdekt.includes(g.id)?'✓ Ontdekt · snel terugreizen':`${Math.round(Math.hypot(g.x-this.spel.speler.pos.x,g.z-this.spel.speler.pos.z))} m · ${g.y?`${g.y} meter hoger`:'in de vallei'}`}</p>${knop(this.a.gebieden.includes(g.id)?this.a.ontdekt.includes(g.id)?'Reis hierheen':'Volg de route':'Bouw eerst de brug',`data-reis="${g.id}" ${this.a.gebieden.includes(g.id)?'':'disabled'}`)}</article>`).join('')}</div>${knop('🐴 Dieren en oude obby’s','data-oud')}`);
     s.querySelectorAll<HTMLButtonElement>('[data-reis]').forEach(b=>b.onclick=()=>this.reis(b.dataset.reis as Gebied));
     s.querySelector<HTMLButtonElement>('[data-oud]')!.onclick=()=>{this.sluit();this.spel.zetSpeler({x:0,y:0,z:10},Math.PI);};
   }
   reis(g:Gebied) {
     if(!this.a.gebieden.includes(g))return;
+    if(!this.a.ontdekt.includes(g)){this.zoek(g);return;}
     this.sluit();this.a.huidigGebied=g;this.spel.zetSpeler(this.wereld.reisPunt(g),Math.PI);this.bewaar();
     if(g==='boomhut'){ontdekHut(this.a);this.bewaar();this.spel.hud.toonBanner('🌳 Jouw boomhut! Praat bij de ingang om meubels te plaatsen. Je startset ligt klaar.',null,{duur:6000});}
   }
+  private zoek(g:Gebied,tip='') {const gebied=GEBIEDEN.find(v=>v.id===g)!;this.bestemming={naam:gebied.naam,punt:this.wereld.reisPunt(g)};this.wereld.markeerRoute(this.bestemming.punt);this.sluit();this.spel.hud.toonBanner(tip||`${gebied.uitleg} Volg het pad en het gouden baken.`,null,{duur:7000});}
+  zweefStart(p:Vec3){if(startTorenVlucht(this.a,p)){this.bewaar();this.spel.hud.toonBanner('🪽 Je zweeft! Stuur naar de bloemencirkel, of laat de vleugel je helpen zonder stuurinvoer.',null,{duur:5000});}}
+  zweefLanding(p:Vec3){const r=landTorenVlucht(this.a,p);if(r){this.bewaar();this.spel.hud.toonBanner(r.tekst,null,{duur:6000});}}
   toonGebied(g:Gebied) {
     const gebied=GEBIEDEN.find(v=>v.id===g)!,lijst=MISSIES.filter(m=>m.gebied===g);
     const klaar=lijst.filter(m=>this.a.missies[m.id].status==='voltooid').length;
     const s=this.scherm(`${gebied.icoon} ${gebied.naam}`,`<p><b>${veilig(gebied.bewoner)}:</b> ${klaar?'Bedankt voor je hulp! Je werk blijft hier zichtbaar. Kies gerust iets anders om te ontdekken.':veilig(gebied.uitleg)}</p><div class="missie-lijst">${lijst.map(m=>this.missieRij(m)).join('')}</div>${knop('Bekijk de wereldkaart','data-kaart')}${g==='bos'?'<p>Praat in het bos ook met Fien, Ubo en Kiki. Hun aanwijzingen komen in je boek.</p>':''}`);
     this.bindMissies(s);s.querySelector<HTMLButtonElement>('[data-kaart]')!.onclick=()=>this.toonKaart();
+    if(g==='toren'){const b=document.createElement('button');b.className='knop klein';b.textContent=`Lift naar je hoogste bordes · ${hoogsteBordes(this.a)*9} meter`;b.disabled=hoogsteBordes(this.a)===0;b.onclick=()=>{this.sluit();this.spel.zetSpeler(bordesPunt(hoogsteBordes(this.a)),Math.PI);};s.querySelector('footer')!.before(b);}
   }
   private missieRij(m:Missie):string {
     const s=this.a.missies[m.id],uit=!magBeginnen(this.a,m),beloning=DECORATIES.find(d=>d.id===m.beloning)!;
-    return `<article><div><h3>${veilig(m.naam)}</h3><p>${s.status==='voltooid'?'✓ Voltooid':s.status==='actief'?`Actief · stap ${s.stap+1}/${m.stappen.length}`:'Beschikbaar · ongeveer 5–10 minuten'} · ${beloning.icoon} ${beloning.naam}</p></div>${knop(s.status==='voltooid'?'Bekijk resultaat':s.status==='actief'?'Verder':'Begin',`data-missie="${m.id}" ${uit&&s.status!=='voltooid'?'disabled':''}`)}${uit?'<small>Dit onderwerp staat uit of het gebied is nog gesloten.</small>':''}</article>`;
+    return `<article><div><h3>${veilig(m.naam)}</h3><p>${s.status==='voltooid'?'✓ Voltooid':s.status==='actief'?`Actief · stap ${s.stap+1}/${m.stappen.length}`:'Beschikbaar · ongeveer 5–10 minuten'} · ${beloning.icoon} ${beloning.naam}</p></div>${knop(s.status==='voltooid'?'Bekijk resultaat':!this.a.ontdekt.includes(m.gebied)?'Zoek deze plek':s.status==='actief'?'Verder':'Begin',`data-missie="${m.id}" ${uit&&s.status!=='voltooid'?'disabled':''}`)}${uit?'<small>Dit onderwerp staat uit of het gebied is nog gesloten.</small>':''}</article>`;
   }
   private bindMissies(s:HTMLElement){s.querySelectorAll<HTMLButtonElement>('[data-missie]').forEach(b=>b.onclick=()=>this.toonMissie(b.dataset.missie!));}
   toonBoek() {
     const m=missie(this.a.actief,this.a),huidig=m?`<aside><h3>Nu: ${veilig(m.naam)}</h3><p>${veilig(m.stappen[this.a.missies[m.id].stap])}</p>${knop('Open opdracht en hints',`data-missie="${m.id}"`)}</aside>`:'<p>Kies zelf waar je wilt helpen. Een lastige opdracht mag je later afmaken.</p>';
-    const brug=this.a.missies.brug;
-    const s=this.scherm('📖 Opdrachten en je tas',`${huidig}<details open><summary>Mijn materialen en verdiende spullen</summary><p>🎏 Vlag: ${this.a.missies.welkom.werk.verzameld.includes('vlag')?(this.a.missies.welkom.status==='voltooid'?'staat op het plein':'in je tas · voor Mila'):'nog bij de gele kist'}<br>🪵 Balken: ${brug.werk.verzameld.length*3-brug.werk.balken} in je tas · voor de brug.</p><div class="spullen">${this.a.decoraties.map(id=>{const d=DECORATIES.find(d=>d.id===id)!;return `<article><b>${d.icoon} ${d.naam}</b><p>${d.gebruik}</p></article>`;}).join('')||'<p>Help bewoners om spullen voor je boomhut te verdienen.</p>'}</div></details><h3>Alle avonturen</h3><div class="missie-lijst">${MISSIES.map(v=>this.missieRij(v)).join('')}</div>${knop('Wereldkaart','data-kaart')}`);
+    const brug=this.a.missies.brug,onderdelen=this.a.missies['toren-vleugel'].werk.verzameld;
+    const vleugelInfo=heeftVleugel(this.a)?'<br>🪽 Zweefvleugel: blijvend in je tas · voor hoge sprongen.':'';
+    const s=this.scherm('📖 Opdrachten en je tas',`${huidig}<details open><summary>Mijn materialen en verdiende spullen</summary><p>🎏 Vlag: ${this.a.missies.welkom.werk.verzameld.includes('vlag')?(this.a.missies.welkom.status==='voltooid'?'staat op het plein':'in je tas · voor Mila'):'nog bij de gele kist'}<br>🪵 Balken: ${brug.werk.verzameld.length*3-brug.werk.balken} in je tas · voor de brug.<br>🪽 Onderdelen: ${onderdelen.length}/3 · voor Ravi. ${VLIEG_ONDERDELEN.filter(p=>onderdelen.includes(p.id)).map(p=>p.naam).join(' · ')}${vleugelInfo}</p><div class="spullen">${this.a.decoraties.map(id=>{const d=DECORATIES.find(d=>d.id===id)!;return `<article><b>${d.icoon} ${d.naam}</b><p>${d.gebruik}</p></article>`;}).join('')||'<p>Help bewoners om spullen voor je boomhut te verdienen.</p>'}</div></details><h3>Alle avonturen</h3><div class="missie-lijst">${MISSIES.map(v=>this.missieRij(v)).join('')}</div>${knop('Wereldkaart','data-kaart')}`);
     this.bindMissies(s);s.querySelector<HTMLButtonElement>('[data-kaart]')!.onclick=()=>this.toonKaart();
   }
   private toonBewoner(id:string) {
@@ -123,6 +139,7 @@ export class Avontuur {
     let m=missie(id);if(!m)return;
     const s=this.a.missies[id];
     if(s.status!=='voltooid'&&!magBeginnen(this.a,m)){this.toonBoek();return;}
+    if(s.status!=='voltooid'&&!this.a.ontdekt.includes(m.gebied)){this.zoek(m.gebied);return;}
     if(s.status==='beschikbaar'&&!beginMissie(this.a,id))return;
     m=missieVoorNiveau(m,s.niveau);
     if(s.status==='actief')this.a.actief=id;
@@ -165,16 +182,18 @@ export class Avontuur {
   }
   private missieInhoud(m:Missie,s:MissieStand):string {
     const w=s.werk;
+    if(m.soort==='vleugel')return `<ul>${VLIEG_ONDERDELEN.map(p=>`<li>${w.verzameld.includes(p.id)?'✓':'🔎'} ${p.naam} · ${p.tip} ${knop('Volg de route naar dit gebied',`data-onderdeelreis="${p.id}"`)}</li>`).join('')}</ul><p>Beide kanten moeten even zwaar zijn. Samen zijn het zes blokjes.</p>${this.keuzes(['🪽 Links 3 · rechts 3','🪽 Links 2 · rechts 4','🪽 Links 4 · rechts 2'],w.keuze)}`;
+    if(m.soort==='vlucht')return `<p>🪽 Vleugel: ${heeftVleugel(this.a)?'blijvend van jou':'pak hem bij het rek als je voorbereidende opdracht klaar is'}.</p><p>🗼 Hoogste ontdekte bordes: ${hoogsteBordes(this.a)*9} / ${TOREN.hoogte} meter.</p><p>🌼 Het landingsveld ligt westelijk van de toren. Spring van het blauwe dek aan de westkant. De vleugel opent vanzelf bij een hoge val. WASD of de joystick stuurt; zonder invoer helpt ze je naar het veld.</p>${knop('Naar de voet van de toren','data-torenreis')}${knop('Lift naar hoogste ontdekte bordes',`data-lift ${hoogsteBordes(this.a)?'':'disabled'}`)}`;
     if(m.soort==='welkom')return `<p>🎏 ${w.verzameld.includes('vlag')?'De vlag zit in je tas. Je kunt hem nu op het plein plaatsen.':'Loop naar de gele kist naast Mila en tik op Onderzoek.'}</p>${w.verzameld.includes('vlag')?knop('Plaats de vlag op het plein','data-plaatsvlag'):knop('Ga naar de gele kist','data-vlagreis')}`;
     if(m.soort==='brug'){
-      const b=brugMaten(this.a);return `<p><b>Oversteek: ${b.doel} meter. Iedere balk: ${b.balk} meter.</b></p><ul>${MATERIAALPLEKKEN.map(p=>`<li>${w.verzameld.includes(p.id)?'✓':'🪵'} ${p.naam} ${knop('Ga naar deze plek',`data-materiaalreis="${p.id}"`)}</li>`).join('')}</ul><div class="brug-maat"><progress max="${b.doel}" value="${Math.min(b.doel,w.balken*b.balk)}" aria-label="Bruglengte"></progress><b>${w.balken*b.balk} / ${b.doel} meter</b></div><div class="balken-beeld" role="img" aria-label="${w.balken} balken van ${b.balk} meter">${Array.from({length:w.balken},()=>`<span>${b.balk} m</span>`).join('')}</div><p>In je tas: ${w.verzameld.length*3-w.balken} balken. Na controle wordt de brug begaanbaar.</p>${knop(`Plaats ${b.balk} meter`,`data-balk ${s.stap===2?'':'disabled'}`)}${knop('Haal laatste balk weg',`data-wegbalk ${w.balken&&s.stap===2?'':'disabled'}`)}`;
+      const b=brugMaten(this.a);return `<p><b>Oversteek: ${b.doel} meter. Iedere balk: ${b.balk} meter.</b></p><ul>${MATERIAALPLEKKEN.map(p=>`<li>${w.verzameld.includes(p.id)?'✓':'🪵'} ${p.naam} · ${p.tip} ${knop('Zoek in dit gebied',`data-materiaalreis="${p.id}"`)}</li>`).join('')}</ul><div class="brug-maat"><progress max="${b.doel}" value="${Math.min(b.doel,w.balken*b.balk)}" aria-label="Bruglengte"></progress><b>${w.balken*b.balk} / ${b.doel} meter</b></div><div class="balken-beeld" role="img" aria-label="${w.balken} balken van ${b.balk} meter">${Array.from({length:w.balken},()=>`<span>${b.balk} m</span>`).join('')}</div><p>In je tas: ${w.verzameld.length*3-w.balken} balken. Na controle wordt de brug begaanbaar.</p>${knop(`Plaats ${b.balk} meter`,`data-balk ${s.stap===2?'':'disabled'}`)}${knop('Haal laatste balk weg',`data-wegbalk ${w.balken&&s.stap===2?'':'disabled'}`)}`;
     }
     if(m.soort==='hut')return knop('Open de bouwmodus','data-inrichten');
     if(['aantallen','budget','wisselgeld'].includes(m.soort)){
       const v=winkelOpdracht(m,s),t=mandTotaal(w.mand,v.prijzen);
       return `<p>${m.soort==='budget'?`Je budget: <b>${euro(v.budget)}</b>.`:m.soort==='wisselgeld'?`Je betaalt: <b>${euro(v.betaald)}</b>.`:'Sara haar bestelling:'}</p><div class="producten">${PRODUCTEN.map((p,i)=>`<article><b>${['🍎','🪵','🎨'][i]} ${p}</b><p>${euro(v.prijzen[i])} per stuk<br>Gevraagd: ${v.nodig[i]} · Mand: <b>${w.mand[i]}</b></p>${knop('−',`data-mand="${i}" data-delta="-1" aria-label="Leg één ${PRODUCT_EENHEDEN[i]} terug"`)}${knop('+',`data-mand="${i}" data-delta="1" aria-label="Pak één ${PRODUCT_EENHEDEN[i]}"`)}</article>`).join('')}</div><p class="mandtotaal">🧺 Totaal: <b>${euro(t)}</b> ${m.soort==='budget'&&t>v.budget?'· Kijk nog eens naar je budget.':''}</p>${m.soort==='aantallen'?'':`<label for="av-antwoord">${m.soort==='budget'?'Hoeveel euro houd je over?':'Hoeveel euro wisselgeld krijg je?'}</label><input id="av-antwoord" data-antwoord inputmode="decimal" autocomplete="off" placeholder="Bijvoorbeeld 4,50" value="${veilig(w.antwoord)}">`}`;
     }
-    if(m.soort==='sleutel')return `${s.niveau===1?`<p class="opdracht">${LEES_STEUN.sleutel}</p>`:''}<div class="aanwijzingen">${BOS_BEWONERS.map(b=>`<article><h3>${b.naam}</h3>${w.gelezen.includes(b.id)?`<p>${veilig(b.tekst)}</p>`:`<p>Deze aanwijzing moet je nog ophalen.</p>${knop('Ga naar deze bewoner',`data-bosreis="${b.id}"`)}`}</article>`).join('')}</div><details ${s.niveau===1?'open':''}><summary>Moeilijke woorden</summary><p>Pluimstaart: een staart met veel zachte haren. Daarna: wat na iets anders gebeurt.</p></details>${this.keuzes([...BOS_KEUZES,...(s.niveau===3?BOS_EXTRA_KEUZES.sleutel:[])],w.keuze)}`;
+    if(m.soort==='sleutel')return `${s.niveau===1?`<p class="opdracht">${LEES_STEUN.sleutel}</p>`:''}<div class="aanwijzingen">${BOS_BEWONERS.map(b=>`<article><h3>${b.naam}</h3>${w.gelezen.includes(b.id)?`<p>${veilig(b.tekst)}</p>`:`<p>Deze aanwijzing moet je nog ophalen.</p>${knop('Zoek deze bewoner',`data-bosreis="${b.id}"`)}`}</article>`).join('')}</div><details ${s.niveau===1?'open':''}><summary>Moeilijke woorden</summary><p>Pluimstaart: een staart met veel zachte haren. Daarna: wat na iets anders gebeurt.</p></details>${this.keuzes([...BOS_KEUZES,...(s.niveau===3?BOS_EXTRA_KEUZES.sleutel:[])],w.keuze)}`;
     if(m.soort==='volgorde'||m.soort==='woord')return `${s.niveau===1?`<p class="opdracht">${LEES_STEUN[m.soort]}</p>`:''}<p class="verhaal">${m.soort==='volgorde'?VOLGORDE_TEKST:WOORD_TEKST}</p>${this.keuzes([...(m.soort==='volgorde'?VOLGORDE_KEUZES:WOORD_KEUZES),...(s.niveau===3?BOS_EXTRA_KEUZES[m.soort]:[])],w.keuze)}`;
     if(m.soort==='verdelen')return `<p>Verdeel de pizza in <b>${pizzaDoel(m,s).verdeling} gelijke stukken</b>. Elk stuk is 1/${pizzaDoel(m,s).verdeling}.</p>${pizzaSvg([],w.verdeling||1)}<div class="acties">${[2,4,...(s.niveau===3?[8]:[])].map(n=>knop(`${n} gelijke stukken`,`data-snij="${n}" aria-pressed="${w.verdeling===n}"`)).join('')}</div>`;
     if(m.soort==='bestelling'||m.soort==='gelijk'){
@@ -190,9 +209,12 @@ export class Avontuur {
     const bind=(sel:string,fn:(b:HTMLButtonElement)=>void)=>v.querySelectorAll<HTMLButtonElement>(sel).forEach(b=>b.onclick=()=>fn(b));
     const antwoord=v.querySelector<HTMLInputElement>('[data-antwoord]');if(antwoord)antwoord.oninput=()=>{w.antwoord=antwoord.value;this.bewaar();};
     bind('[data-plaatsvlag]',()=>{const r=controleerMissie(this.a,m.id);this.bewaar();this.toonMissie(m.id,r.tekst);});
-    bind('[data-vlagreis]',()=>{this.sluit();this.spel.zetSpeler({x:-4.5,y:0,z:-38.5},Math.PI);});
-    bind('[data-materiaalreis]',b=>{const p=MATERIAALPLEKKEN.find(p=>p.id===b.dataset.materiaalreis)!;this.sluit();this.spel.zetSpeler({x:p.x+1.6,y:0,z:p.z+1.5},Math.PI);});
-    bind('[data-bosreis]',b=>{const p=BOS_BEWONERS.find(p=>p.id===b.dataset.bosreis)!;this.sluit();this.spel.zetSpeler({x:p.x+1.5,y:0,z:p.z+1.5},Math.PI);});
+    bind('[data-vlagreis]',()=>this.zoek('dorp','Zoek de gele kist links op het dorpsplein.'));
+    bind('[data-materiaalreis]',b=>{const p=MATERIAALPLEKKEN.find(p=>p.id===b.dataset.materiaalreis)!;this.zoek(p.gebied,p.tip);});
+    bind('[data-bosreis]',b=>{const p=BOS_BEWONERS.find(p=>p.id===b.dataset.bosreis)!;this.zoek('bos',`Zoek ${p.naam} op de bosheuvel. Fien loopt aan de westkant, Ubo bij het boshuisje en Kiki aan de oostkant.`);});
+    bind('[data-onderdeelreis]',b=>{const p=VLIEG_ONDERDELEN.find(p=>p.id===b.dataset.onderdeelreis)!;this.zoek(p.gebied,p.tip);});
+    bind('[data-torenreis]',()=>this.reis('toren'));
+    bind('[data-lift]',()=>{if(!hoogsteBordes(this.a))return;this.sluit();this.spel.zetSpeler(bordesPunt(hoogsteBordes(this.a)),Math.PI);});
     bind('[data-balk]',()=>{plaatsBalk(this.a);herteken();});bind('[data-wegbalk]',()=>{plaatsBalk(this.a,true);herteken();});
     bind('[data-inrichten]',()=>this.toonHut());
     bind('[data-mand]',b=>{const i=Number(b.dataset.mand);w.mand[i]=Math.max(0,Math.min(20,w.mand[i]+Number(b.dataset.delta)));herteken();});
@@ -279,3 +301,4 @@ export class Avontuur {
   }
 }
 function missie(id:string|null,a?:AvontuurStand):Missie|undefined{const m=MISSIES.find(m=>m.id===id);return m&&a?missieVoorNiveau(m,a.missies[m.id].niveau):m;}
+function richting(p:Vec3,q:Vec3):string {const i=(Math.round(Math.atan2(q.x-p.x,p.z-q.z)/(Math.PI/4))+8)%8;return ['↑ noord','↗ noordoost','→ oost','↘ zuidoost','↓ zuid','↙ zuidwest','← west','↖ noordwest'][i];}
