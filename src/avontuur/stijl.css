@@ -1,0 +1,57 @@
+/* Avonturen sluiten aan bij de bestaande ronde panelen en touchbediening. */
+#avontuur-taak { position:absolute; left:16px; bottom:145px; width:min(345px,calc(100% - 32px)); padding:12px 16px; color:#293949; font:700 16px/1.4 var(--lettertype); border:2px solid #d9aa51; pointer-events:auto; text-align:left; }
+#avontuur-interactie { position:absolute; bottom:22px; left:50%; transform:translateX(-50%); max-width:calc(100% - 240px); font-size:17px; padding:14px 22px; pointer-events:auto; background:#245c70; color:white; box-shadow:0 5px 0 #153d50; }
+.avontuur-scherm { align-items:start; animation:none; }
+.avontuur-scherm .kaart { animation:none; }
+.avontuur { width:min(980px,100%); max-width:980px; text-align:left; padding:24px; }
+.avontuur header { display:flex; align-items:center; gap:20px; justify-content:space-between; }
+.avontuur h2 { margin:0; font-size:clamp(23px,3vw,32px); }
+.av-sluiten { width:44px; height:44px; border:2px solid #e3d7c1; border-radius:50%; background:#fff6e4; color:#384356; font-size:22px; flex:none; }
+.avontuur p { font-size:18px; line-height:1.55; margin:12px 0; }
+.avontuur .klein { font-size:15px; }
+.avontuur h3 { font-size:19px; margin:0 0 8px; }
+.avontuur .knop.klein { font-size:16px; padding:11px 15px; min-height:44px; margin:4px; background:#276b67; color:#fff; box-shadow:0 4px 0 #164841; }
+.avontuur .knop.wit { background:#fff7e8; color:#2c4452; box-shadow:0 4px 0 #dfcaa4; border:1px solid #d3bd92; }
+.avontuur button:disabled { opacity:.55; cursor:default; }
+.avontuur button[aria-pressed="true"] { outline:3px solid #f1bc49; outline-offset:2px; }
+.avontuur label { display:block; margin:10px 0 5px; font-size:17px; font-weight:650; }
+.avontuur input:not([type="checkbox"]),.avontuur select { min-height:44px; max-width:100%; padding:10px; border:2px solid #9daab1; border-radius:9px; background:#fff; color:#283c4d; font:inherit; user-select:text; touch-action:auto; }
+.avontuur details { margin:16px 0; border:1px solid #d4b98b; padding:12px; border-radius:12px; background:#fffaf0; }
+.avontuur summary { cursor:pointer; min-height:32px; font-size:18px; font-weight:700; }
+.avontuur .opdracht,.avontuur aside { background:#fff0c8; border-left:5px solid #ba862c; padding:12px; border-radius:10px; }
+.avontuur .verhaal { padding:12px 15px; background:#eef5f2; border-radius:12px; }
+.avontuur .feedback { min-height:28px; font-size:17px; color:#245d50; font-weight:700; }
+.avontuur footer { border-top:1px solid #e0d1b6; margin-top:15px; padding-top:10px; }
+.gebieden,.producten,.planten,.spullen,.aanwijzingen,.onderwerpen { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:14px 0; }
+.gebieden article,.producten article,.planten article,.spullen article,.aanwijzingen article { border:1px solid #c8d7d1; background:#f3f8f5; border-radius:13px; padding:14px; }
+.gebieden article { border-top:6px solid var(--gebied); }
+.missie-lijst { display:grid; gap:10px; margin:12px 0; }
+.missie-lijst article { border:1px solid #d3dcd7; border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; background:#f5f8f5; }
+.missie-lijst article p { font-size:15px; margin:0; }
+.acties,.keuzes { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.brug-maat { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.brug-maat progress { width:65%; height:30px; accent-color:#936537; }
+.balken-beeld { display:flex; min-height:52px; background:#a8d5e8; border:2px solid #5e95ad; margin:12px 0; padding:8px; }
+.balken-beeld span { background:#bc8a58; color:#241e19; border:2px solid #6e4b2f; flex:1; max-width:16.666%; text-align:center; font-weight:700; padding:6px; }
+.getallenlijn { display:flex; justify-content:space-between; gap:3px; border-bottom:3px solid #604527; padding:8px 0; margin:16px 0; }
+.getallenlijn span { font-size:18px; font-weight:700; }.getallenlijn small{display:block;font-size:13px;}
+.pizza-beeld { width:190px; height:190px; max-width:100%; display:block; }
+.pizza-borden { display:flex; flex-wrap:wrap; gap:24px; align-items:center; }
+.hut-layout,.robot-layout { display:grid; grid-template-columns:minmax(250px,1fr) minmax(200px,1fr); gap:22px; margin:15px 0; }
+.hut-raster { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px; padding:8px; background:#906f4f; border-radius:12px; align-self:start; }
+.tegel { aspect-ratio:1; min-width:0; min-height:32px; border:1px solid #ae8251; background:#f0cd9e; color:#374657; font-size:clamp(16px,2.5vw,25px); border-radius:5px; }
+.tegel.pad { background:#b9d5c3; opacity:1!important; }.tegel.gekozen{outline:3px solid #fff38b;}
+.hut-spullen { display:flex; flex-wrap:wrap; align-items:start; }
+.robot-raster { display:grid; grid-template-columns:repeat(var(--kolommen),1fr); gap:4px; padding:7px; background:#a4aed1; border-radius:10px; }
+.robot-vak { aspect-ratio:1; min-width:0; background:#edf0ff; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:clamp(17px,3vw,27px); color:#424967; }
+.robot-vak.obstakel { background:#cdaf81; }
+.programma { max-height:260px; overflow-y:auto; padding-left:26px; touch-action:pan-y; }
+.programma li { padding:7px; background:#eef1fc; border:2px solid transparent; border-radius:8px; margin:5px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.programma li.bezig { background:#fff0bb; border-color:#bb8a34; }
+.programma .knop.klein { min-height:38px; padding:4px 9px; }
+.plant-beeld { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:end; }
+.plant-stam { border-left:7px solid #539346; min-height:24px; font-size:30px; position:relative; padding-left:2px; }
+.plant-pot { background:#ce916b; padding:4px 10px; border-radius:0 0 8px 8px; color:#282b29; font-weight:700; }
+.avontuur fieldset { border:1px solid #adbbaf; border-radius:10px; padding:12px; }
+@media(max-width:800px){ #knoppen-rechts{gap:7px;max-width:300px;flex-wrap:wrap;justify-content:end;} #knoppen-rechts .ronde-knop{width:44px;height:44px;font-size:22px;} .avontuur{padding:18px;} }
+@media(max-width:580px){ #knoppen-rechts{max-width:180px;} #dagdoel{max-width:165px;font-size:13px!important;} #avontuur-taak{bottom:165px;width:calc(100% - 32px);font-size:14px;} #avontuur-interactie{bottom:110px;max-width:calc(100% - 32px);width:max-content;font-size:14px;} .avontuur{width:100%;padding:14px;} .avontuur p{font-size:16px;} .hut-layout,.robot-layout{grid-template-columns:1fr;} .producten,.planten{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;} .producten article,.planten article{padding:9px;} .producten article:last-child{grid-column:1/-1;} .gebieden{grid-template-columns:1fr;} .pizza-beeld{width:150px;height:150px;} }

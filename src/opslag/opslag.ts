@@ -4,6 +4,7 @@ import { KAST, STANDAARD_UITERLIJK, type Uiterlijk } from '../figuren/uiterlijk'
 import type { WoordStats } from '../leren/herhaalbakjes';
 import { CATEGORIEEN, MAX_WEEKWOORDEN, geldigeWoordkaart, oefenWoorden } from '../leren/schoolwoorden';
 import type { Categorie, Woordkaart } from '../leren/woorden';
+import { nieuwAvontuur, valideerAvontuur, type AvontuurStand } from '../avontuur/logica';
 
 export type DierenTaak = 'voeren' | 'borstelen' | 'apporteren';
 export interface DagVoortgang {
@@ -67,6 +68,8 @@ export interface Spelstand {
   minderEffecten: boolean;
   introStap: number;
   dag: DagVoortgang;
+  /** Avonturen hebben een eigen opslagversie; oude spelstanden blijven bruikbaar. */
+  avontuur: AvontuurStand;
 }
 
 const SLEUTEL = 'nintes-wereld';
@@ -124,6 +127,7 @@ export function nieuweStand(): Spelstand {
     minderEffecten: false,
     introStap: 0,
     dag: legeDag(),
+    avontuur: nieuwAvontuur(),
   };
 }
 
@@ -221,6 +225,9 @@ export function valideerStand(data: unknown): { stand: Spelstand; aangepast: boo
   for (const k of ['woordenGoed', 'woordenFout', 'verbeterd', 'sommenGoed', 'sommenFout', 'hoefijzers'] as const) stand.dag[k] = getal(dag, k);
   stand.dag.speelSeconden = lees(dag, 'speelSeconden', (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 86400, 0);
   stand.dag.klaar = lees(dag, 'klaar', (v) => typeof v === 'boolean', false);
+  const avontuur = valideerAvontuur(r.avontuur);
+  stand.avontuur = avontuur.stand;
+  aangepast ||= avontuur.aangepast;
   return { stand, aangepast };
 }
 
@@ -290,7 +297,7 @@ export function leesBackUp(tekst: string): Spelstand {
   const r = record(data);
   if (!r || r.formaat !== 'nintes-wereld-voortgang' || r.versie !== 1) throw new Error('Kies een back-up van Nintes Wereld.');
   const inhoud = record(r.stand);
-  if (!inhoud || !Object.keys(nieuweStand()).every((k) => Object.hasOwn(inhoud, k)))
+  if (!inhoud || !Object.keys(nieuweStand()).filter(k => k !== 'avontuur').every((k) => Object.hasOwn(inhoud, k)))
     throw new Error('Deze back-up is onvolledig. Je huidige voortgang is behouden.');
   const resultaat = valideerStand(r.stand);
   if (resultaat.aangepast) throw new Error('Deze back-up bevat ongeldige gegevens. Je huidige voortgang is behouden.');

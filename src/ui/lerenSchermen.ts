@@ -112,12 +112,13 @@ function resultaat(stats: WoordStats, sleutels: string[]): string {
   return goed + fout ? `${Math.round(100 * goed / (goed + fout))}% (${goed} goed, ${fout} fout)` : 'Nog niet geoefend';
 }
 
-export function oudersScherm(stand: Spelstand, opWijzig: () => void, opSluit: () => void, opVerder?: () => void) {
+export function oudersScherm(stand: Spelstand, opWijzig: () => void, opSluit: () => void, opVerder?: () => void, opAvonturen?: () => void) {
   const alleWoorden = oefenWoorden(stand.weekwoorden, false, CATEGORIEEN);
   const zwak = alleWoorden.filter((w) => stand.dictee[w.woord])
     .sort((a, b) => stand.dictee[a.woord].bakje - stand.dictee[b.woord].bakje || stand.dictee[b.woord].fout - stand.dictee[a.woord].fout).slice(0, 12);
   const sommen = Object.entries(stand.sommen).filter(([, s]) => s.fout > 0).sort((a, b) => b[1].fout - a[1].fout).slice(0, 10);
   const s = toon(`<div class="kaart leren ouders"><h2>Voor ouders</h2>
+    ${opAvonturen ? '<button class="knop wit" data-avonturen>Avonturen · onderwerpen, niveau en inrichting</button>' : ''}
     <p class="klein">Voortgang en schoolwoorden blijven op dit apparaat. Een back-up helpt bij overstappen of verlies van browsergegevens.</p>
     <h3>Vandaag</h3><p>${dierenAantal(stand)}/6 dierenwoorden · ${stand.dag.woordenGoed} meteen goed · ${stand.dag.woordenFout} met hulp · ${stand.dag.verbeterd} verbeterd.<br>
     Rekenen: ${stand.dag.sommenGoed} goed, ${stand.dag.sommenFout} fout. Speeltijd: ${Math.floor(stand.dag.speelSeconden / 60)} minuten.</p>
@@ -140,6 +141,7 @@ export function oudersScherm(stand: Spelstand, opWijzig: () => void, opSluit: ()
     ${opVerder ? '<button class="knop wit" data-verder>Nog spelen vandaag toestaan</button>' : ''}
     <button class="knop wit" data-sluit>Terug</button></div>`);
   const feedback = s.querySelector<HTMLElement>('[data-feedback]')!;
+  if (opAvonturen) s.querySelector<HTMLButtonElement>('[data-avonturen]')!.onclick = opAvonturen;
   s.querySelector<HTMLButtonElement>('[data-bewaar]')!.onclick = () => {
     const gelezen = leesWeekwoorden(s.querySelector<HTMLTextAreaElement>('textarea')!.value);
     const categorieen = [...s.querySelectorAll<HTMLInputElement>('[data-categorie]:checked')].map((v) => v.value as Categorie);

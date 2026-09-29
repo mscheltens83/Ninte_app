@@ -4,6 +4,12 @@ Een Roblox-achtig leerspel voor Ninte (9 jaar, groep 6). Ze zorgt voor haar eige
 
 Het volledige plan staat in [PLAN.md](PLAN.md).
 
+## Avonturenwereld
+
+Het dorpsplein verbindt de brug naar een geheim eiland en inrichtbare boomhut met de dorpswinkel, het verhalenbos, pizzacafé, uitvinderslab en natuurtuin. Er zijn 18 speelbare missies met materialen, unieke decoratiebeloningen, hints in drie stappen en bewaarde voortgang. Dieren en obby's blijven bereikbaar.
+
+Zie [HANDLEIDING.md](HANDLEIDING.md) voor starten op Windows, bediening, aanpassen van leerinhoud, opslag en een speeltestchecklist. De taken en controles staan in [UITBREIDING.md](UITBREIDING.md).
+
 ## Leren en veilig bewaren
 
 - **Help je dieren (0/6):** typ zes woorden per dag om de pony te voeren en te borstelen en de puppy een bal te laten halen. Eerste antwoorden en verbeteringen worden apart geteld. Het bekijken van een woord telt als hulp.

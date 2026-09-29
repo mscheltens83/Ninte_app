@@ -53,7 +53,7 @@ export function titelScherm(opSpelen: () => void, opOuders?: () => void) {
   const s = toon(
     `<div class="titel">
       <h1>Nintes Wereld</h1>
-      <p class="ondertitel">Paarden · Honden · Spelling-avonturen</p>
+      <p class="ondertitel">Ontdekken · Bouwen · Samen leren</p>
       <button class="knop" data-spelen>Spelen</button>
       ${opOuders ? '<button class="knop wit" data-ouders>Voor ouders</button>' : ''}
     </div>`,

@@ -1,4 +1,5 @@
 import './stijl.css';
+import './avontuur/stijl.css';
 import { HOND_KLEUREN, PONY_KLEUREN } from './figuren/dieren';
 import { initVoorlezen, spreek, stelStemIn } from './leren/voorlezen';
 import { bewaarStand, laadStand, opOpslagMelding } from './opslag/opslag';
@@ -28,7 +29,7 @@ const computer = window.matchMedia('(hover: hover) and (pointer: fine)').matches
 function welkom() {
   const tekst = spel.seizoen
     ? seizoenGroet(spel.seizoen, stand.speler)
-    : `Hoi ${stand.speler}! Volg de bordjes naar de Deuren-obby of de Reken-obby.`;
+    : `Hoi ${stand.speler}! Dit is het dorpsplein. Praat met Mila of kies een avontuur op de wereldkaart.`;
   const sleutel = spel.seizoen ? undefined : ['hoi', 'volg-bordjes'];
   spel.hud.toonBanner(tekst, () => spreek(tekst, sleutel), { duur: 7000 });
   spreek(tekst, sleutel);

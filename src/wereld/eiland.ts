@@ -7,7 +7,7 @@ import { WACHTWOORD } from './geheimen';
 
 export const EILAND_RAND = 35; // gras loopt van -35 tot 35
 export const WATER_HOOGTE = -0.7;
-export const STARTPUNT = new THREE.Vector3(0, 0, 10);
+export const STARTPUNT = new THREE.Vector3(0, 0, -43);
 
 export interface Eiland {
   groep: THREE.Group;
@@ -163,7 +163,7 @@ function hondenhok(groep: THREE.Group, f: Fysica): Tekstbord {
 }
 
 function dorpBinnenkort(groep: THREE.Group, f: Fysica) {
-  bordOpPalen(groep, f, 'Binnenkort:\nhet dorp!', 0, -27, 0, 4.4, 2);
+  bordOpPalen(groep, f, '↑ Dorpsplein\nVolg het pad', 0, -27, 0, 4.4, 2);
   const oranje = '#ff8a3d';
   for (const [x, z] of [[-3, -29], [3, -29], [-1.5, -31], [1.8, -31.5]]) {
     groep.add(blokOp(0.5, 0.8, 0.5, oranje, x, 0, z));
@@ -199,7 +199,8 @@ const VRIJE_ZONES: [number, number, number, number][] = [
   [24, 35, -8, 10], // start van de Deuren-obby
   [16, 23, -21, 10], // pad naar de Reken-obby
   [20, 35, -24, -12], // start van de Reken-obby
-  [-8, 8, -34, -24], // dorp (binnenkort)
+  [-8, 8, -34, -24], // pad naar het dorpsplein
+  [-3, 3, -35, -8], // vrije wandelverbinding naar de nieuwe wereld
 ];
 
 function inVrijeZone(x: number, z: number): boolean {

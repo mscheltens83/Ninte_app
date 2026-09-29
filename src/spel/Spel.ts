@@ -26,6 +26,7 @@ import { Leven, isWater } from '../wereld/leven';
 import { Effecten } from '../wereld/versiering';
 import { Besturing } from './besturing';
 import { Fysica, type Lichaam } from './fysica';
+import { Avontuur } from '../avontuur/schermen';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
@@ -78,6 +79,7 @@ export class Spel {
   readonly rekenObby: DeurenObby;
   private obbies: ObbyStaat[];
   readonly geheimen: Geheimen;
+  readonly avontuur: Avontuur;
   private versiering: SeizoenVersiering | null = null;
   private avatar: Avatar;
   private pony: Pony | null = null;
@@ -192,6 +194,7 @@ export class Spel {
 
     window.addEventListener('resize', () => this.pasFormaatAan());
     this.pasFormaatAan();
+    this.avontuur = new Avontuur(this, stand);
   }
 
   start() {
@@ -445,7 +448,7 @@ export class Spel {
       this.stand.dag.klaar = false;
       bewaarStand(this.stand);
       this.hervat();
-    } : undefined);
+    } : undefined, () => this.avontuur.toonOuderAvonturen(() => this.toonOuders(opSluit)));
   }
 
   toonDieren() {
@@ -481,6 +484,7 @@ export class Spel {
   }
 
   private sluitDagAf() {
+    this.avontuur?.stop();
     this.dicteeActief = false;
     this.stand.dag.klaar = true;
     this.pauzeer();
@@ -533,12 +537,13 @@ export class Spel {
       if (this.dicteeActief || (rustte && this.modus === 'scherm')) this.hervat();
       this.zetDagdoel(); bewaarStand(this.stand);
     }
-    if (telSpeeltijd(this.stand, verstreken, !document.hidden && (this.modus === 'spelen' || this.dicteeActief)) && !this.stand.dag.klaar)
+    if (telSpeeltijd(this.stand, verstreken, !document.hidden && (this.modus === 'spelen' || this.dicteeActief || this.avontuur.aanHetOefenen)) && !this.stand.dag.klaar)
       this.sluitDagAf();
     this.bewaarTimer += dt;
     if (this.bewaarTimer >= 15 && (this.modus === 'spelen' || this.dicteeActief)) { this.bewaarTimer = 0; bewaarStand(this.stand); }
     this.tijd += dt;
     this.besturing.update();
+    this.avontuur.update();
 
     if (this.modus === 'titel') this.updateTitelCamera(dt);
     if (this.modus === 'kast') this.updateKastCamera(dt);
@@ -586,7 +591,7 @@ export class Spel {
     for (let i = 0; i < 2; i++) {
       const x = p.x + (Math.random() - 0.5) * 60;
       const z = p.z + (Math.random() - 0.5) * 60;
-      if (isWater(x, z)) this.effecten.waterGlinster(new THREE.Vector3(x, WATER_HOOGTE + 0.03, z));
+      if (isWater(x, z) && !this.avontuur.wereld.isLand(x,z)) this.effecten.waterGlinster(new THREE.Vector3(x, WATER_HOOGTE + 0.03, z));
     }
     if (Math.random() < 0.35) {
       for (const h of this.geheimen.zichtbareHoefijzers()) {
@@ -890,6 +895,14 @@ export class Spel {
     const voor = new THREE.Vector3(Math.sin(this.kijkHoek), 0, Math.cos(this.kijkHoek));
     const grens = EILAND_RAND - 1;
     const opEiland = (v: THREE.Vector3) => {
+      if (s.z < -35) {
+        const hz = this.avontuur.wereld.hutZ();
+        const opGeheim = s.z < -90 && this.stand.avontuur.gebieden.includes('boomhut');
+        v.x = THREE.MathUtils.clamp(v.x, opGeheim ? -10 : -33, opGeheim ? 10 : 33);
+        v.z = THREE.MathUtils.clamp(v.z, opGeheim ? hz-10 : -84, opGeheim ? hz+10 : -38);
+        v.y = 0;
+        return v;
+      }
       v.x = THREE.MathUtils.clamp(v.x, -grens, grens);
       v.z = THREE.MathUtils.clamp(v.z, -grens, grens);
       v.y = 0;
