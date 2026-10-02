@@ -1,5 +1,7 @@
 import './stijl.css';
 import './avontuur/stijl.css';
+import './ritme/stijl.css';
+import './bouwen/stijl.css';
 import { HOND_KLEUREN, PONY_KLEUREN } from './figuren/dieren';
 import { initVoorlezen, spreek, stelStemIn } from './leren/voorlezen';
 import { bewaarStand, laadStand, opOpslagMelding } from './opslag/opslag';

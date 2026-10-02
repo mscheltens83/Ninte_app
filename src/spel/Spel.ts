@@ -31,6 +31,17 @@ import { bouwVleugel } from '../avontuur/wereld';
 import { heeftVleugel } from '../avontuur/logica';
 import { pasZweefSnelheidAan } from '../avontuur/landschap';
 import { WERELD } from '../avontuur/inhoud';
+import { Muziekregie } from '../ritme/regie';
+import { Feestwereld, LICHT_KLEUREN, PODIUM, opDansvloer } from '../ritme/feestwereld';
+import { kiesMuziekPlek } from '../ritme/plek';
+import { Muziekmeter } from '../ritme/meter';
+import { beatScherm } from '../ritme/beatScherm';
+import { UITDAGINGEN, isLeeg, kopieBeat, voorbeeldBeat } from '../ritme/beat';
+import { ENERGIE_NAMEN, type MuziekPlek } from '../ritme/liedjes';
+import { puls } from '../ritme/dansen';
+import { BouwWereld, INGANG, KAVEL_MIDDEN } from '../bouwen/wereld';
+import { BouwModus } from '../bouwen/bouwModus';
+import { BOUW_OPDRACHTEN } from '../bouwen/opdrachten';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
@@ -44,7 +55,7 @@ const REKEN_OORSPRONG = new THREE.Vector3(29, 0, -18);
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
 const AANTAL_GOUDEN = 5;
 
-type Modus = 'titel' | 'spelen' | 'scherm' | 'kast';
+type Modus = 'titel' | 'spelen' | 'scherm' | 'kast' | 'bouwen';
 
 /** Wat het spel per obby bijhoudt. */
 interface ObbyStaat {
@@ -61,9 +72,11 @@ export class Spel {
   readonly fysica = new Fysica();
   readonly geluid = new Geluid();
   readonly muziek = new Muziek(this.geluid);
+  /** Kiest tussen meespeelmuziek en MP3-nummers; de rest van het spel praat alleen hiermee. */
+  readonly ritme: Muziekregie;
   readonly opnames = new Opnames(
     () => this.geluid.context,
-    (bezig) => this.muziek.demp(bezig),
+    (bezig) => this.ritme.demp(bezig),
   );
   readonly hud = new Hud();
   readonly besturing: Besturing;
@@ -92,6 +105,13 @@ export class Spel {
   private puppy: Puppy | null = null;
   private effecten: Effecten;
   private leven: Leven;
+  private feest: Feestwereld;
+  private bouwWereld: BouwWereld;
+  private bouwModus: BouwModus;
+  private meter: Muziekmeter;
+  private dierDans: (() => void)[] = [];
+  private laatsteTel = 0;
+  private laatsteFeest = -999;
   private glinsterTimer = 0;
   private zon: THREE.DirectionalLight;
   private klok = new THREE.Timer();
@@ -123,6 +143,7 @@ export class Spel {
 
   constructor(canvas: HTMLCanvasElement, readonly stand: Spelstand) {
     nieuweDag(stand);
+    this.ritme = new Muziekregie(this.geluid, this.muziek, stand.ritme);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -146,6 +167,20 @@ export class Spel {
     this.scene.add(this.zon, this.zon.target);
 
     this.eiland = bouwEiland(this.scene, this.fysica);
+    this.feest = new Feestwereld(this.scene, this.fysica, { zuinig: stand.beeldkwaliteit === 'zuinig' });
+    this.bouwWereld = new BouwWereld(this.scene, this.fysica, stand.bouwen);
+    this.bouwModus = new BouwModus({
+      wereld: this.bouwWereld,
+      stand: stand.bouwen,
+      camera: this.camera,
+      vlak: document.getElementById('vlak')!,
+      houder: document.getElementById('spel')!,
+      geluid: { klik: () => this.geluid.klik(), plaats: () => this.geluid.bouw(), weg: () => this.geluid.gum(), fout: () => this.geluid.fout() },
+      spreek: (tekst) => spreek(tekst),
+      opVoltooid: (o) => this.bouwOpdrachtGehaald(o.beloning.hoefijzers),
+      opBewaar: () => bewaarStand(this.stand),
+      opKlaar: () => this.stopBouwen(),
+    });
     this.obby = new DeurenObby(this.scene, this.fysica, OBBY_OORSPRONG, SPELLING_THEMA);
     this.rekenObby = new DeurenObby(this.scene, this.fysica, REKEN_OORSPRONG, REKEN_THEMA);
     this.obbies = [this.obby, this.rekenObby].map((obby) => ({
@@ -185,10 +220,12 @@ export class Spel {
     this.besturing.aan = false;
 
     this.geluid.aan = stand.geluidAan;
-    this.muziek.zetAan(stand.muziekAan);
-    opSpreken((bezig) => this.muziek.demp(bezig));
+    this.ritme.zetAan(stand.muziekAan);
+    this.ritme.live.opNiveau = (niveau, vorig) => { if (niveau >= 4 && vorig < 4) this.feestje(); };
+    opSpreken((bezig) => this.ritme.demp(bezig));
     stelOpnameSpelerIn((sleutels) => this.speelOpnames(sleutels));
     this.hud.zetHoefijzers(stand.hoefijzers);
+    this.meter = new Muziekmeter(document.getElementById('hoefijzers')!, () => this.toonMuziekInfo());
     this.hud.zichtbaar(false);
     this.doelKnop.id = 'dagdoel';
     this.doelKnop.className = 'paneel';
@@ -202,6 +239,22 @@ export class Spel {
     window.addEventListener('resize', () => this.pasFormaatAan());
     this.pasFormaatAan();
     this.avontuur = new Avontuur(this, stand);
+    // Het discopodium doet mee met de gewone interactieknop (E / tik).
+    for (const i of this.feest.interacties) {
+      i.doe = () => this.toonBeatmaker();
+      this.avontuur.wereld.interacties.push(i);
+    }
+    // Bas de bouwer: E / tik opent de bouwmodus.
+    for (const i of this.bouwWereld.interacties) {
+      i.doe = () => this.startBouwen();
+      this.avontuur.wereld.interacties.push(i);
+    }
+    this.feest.dansvloer.voegToe(this.bouwWereld.bas, 'veer', { sterkte: 0.8 });
+    // De bewoners wiegen en veren mee op de muziek.
+    this.avontuur.wereld.bewoners.forEach((b, i) => {
+      this.feest.dansvloer.voegToe(b.groep, 'veer', { sterkte: 0.8, fase: i * 0.13 });
+      this.feest.dansvloer.voegToe(b.groep, 'wieg', { sterkte: 0.6, fase: i * 0.37 });
+    });
   }
 
   start() {
@@ -212,12 +265,19 @@ export class Spel {
   /** Na de eerste tik: geluid ontgrendelen en de muziek starten. */
   startGeluid() {
     this.geluid.ontgrendel();
-    this.muziek.speel('eiland');
+    this.ritme.speel(this.muziekPlek());
+  }
+
+  /** Welk muziekje hoort bij de plek waar Ninte nu is. */
+  private muziekPlek(): MuziekPlek {
+    return kiesMuziekPlek({ pos: this.speler.pos, opWolken: this.geheimen.opWolken(this.speler), inObby: !!this.huidigeObby() });
   }
 
   /** (Opnieuw) pony en puppy maken met de gekozen naam en kleur. */
   maakDieren() {
     for (const d of [this.pony, this.puppy]) if (d) this.scene.remove(d.groep);
+    for (const stop of this.dierDans) stop();
+    this.dierDans = [];
     const { pony, puppy } = this.stand;
     this.pony = pony ? new Pony(pony.naam, vachtVan(PONY_KLEUREN, pony.kleur)) : null;
     this.puppy = puppy ? new Puppy(puppy.naam, vachtVan(HOND_KLEUREN, puppy.kleur)) : null;
@@ -230,6 +290,9 @@ export class Spel {
       this.puppy.groep.position.set(STARTPUNT.x - 1.5, 0, STARTPUNT.z - 0.2);
       this.scene.add(this.puppy.groep);
     }
+    // Pony en puppy veren mee op de maat.
+    if (this.pony) this.dierDans.push(this.feest.dansvloer.voegToe(this.pony.groep, 'veer', { sterkte: 0.6 }));
+    if (this.puppy) this.dierDans.push(this.feest.dansvloer.voegToe(this.puppy.groep, 'veer', { sterkte: 0.9, fase: 0.5 }));
     if (this.seizoen === 'winter') {
       for (const [dier, maat] of [[this.pony, 0.75], [this.puppy, 0.6]] as const) {
         if (!dier) continue;
@@ -278,13 +341,15 @@ export class Spel {
 
   hervat() {
     this.dicteeActief = false;
+    if (this.ritme.beatmakerOpen) this.ritme.sluitBeatmaker();
+    if (this.bouwModus.isOpen) this.bouwModus.sluit(false);
     if (this.stand.dag.klaar || tijdVoorbij(this.stand)) { this.sluitDagAf(); return; }
     sluitScherm();
     this.modus = 'spelen';
     this.hud.zichtbaar(true);
     this.besturing.aan = true;
-    this.muziek.demp(false);
-    this.muziek.zetAan(this.stand.muziekAan);
+    this.ritme.demp(false);
+    this.ritme.zetAan(this.stand.muziekAan);
     this.renderer.domElement.focus({ preventScroll: true });
   }
 
@@ -297,7 +362,13 @@ export class Spel {
       geluidAan: this.stand.geluidAan,
       muziekAan: this.stand.muziekAan,
       nummers: this.muziek.nummers.map(({ id, naam, plek, eigen }) => ({ id, naam, plek, eigen })),
-      huidigNummer: this.muziek.huidigNummer?.naam ?? null,
+      huidigNummer: this.ritme.huidigeNaam,
+      muziekSoort: this.ritme.soort,
+      opMuziekSoort: (soort) => {
+        this.ritme.zetSoort(soort);
+        bewaarStand(this.stand);
+        window.setTimeout(() => this.herlaadInstellingen(), 400);
+      },
       opVolgende: () => {
         this.muziek.volgende();
         window.setTimeout(() => this.herlaadInstellingen(), 700);
@@ -324,7 +395,7 @@ export class Spel {
       },
       opMuziek: (aan) => {
         this.stand.muziekAan = aan;
-        this.muziek.zetAan(aan);
+        this.ritme.zetAan(aan);
         bewaarStand(this.stand);
       },
       opStem: (naam) => {
@@ -363,7 +434,7 @@ export class Spel {
 
   /** Zelf de zinnen inspreken. De muziek staat dan even stil. */
   private toonInspreken() {
-    this.muziek.zetAan(false);
+    this.ritme.zetAan(false);
     inspreekScherm({
       zinnen: INSPREEK_ZINNEN,
       micStatus: Opnames.micStatus(),
@@ -379,7 +450,7 @@ export class Spel {
       opWis: (sleutel) => this.opnames.wis(sleutel),
       opSluit: () => {
         this.opnames.annuleer();
-        this.muziek.zetAan(this.stand.muziekAan);
+        this.ritme.zetAan(this.stand.muziekAan);
         this.geluid.klik();
         this.hervat();
       },
@@ -496,8 +567,10 @@ export class Spel {
     this.stand.dag.klaar = true;
     this.pauzeer();
     this.hud.verbergBanner();
-    this.muziek.demp(true);
-    this.muziek.zetAan(false);
+    if (this.ritme.beatmakerOpen) this.ritme.sluitBeatmaker();
+    if (this.bouwModus.isOpen) this.bouwModus.sluit(false);
+    this.ritme.demp(true);
+    this.ritme.zetAan(false);
     bewaarStand(this.stand);
     dagAfsluiting(this.stand, () => this.toonOuders());
   }
@@ -544,7 +617,7 @@ export class Spel {
       if (this.dicteeActief || (rustte && this.modus === 'scherm')) this.hervat();
       this.zetDagdoel(); bewaarStand(this.stand);
     }
-    if (telSpeeltijd(this.stand, verstreken, !document.hidden && (this.modus === 'spelen' || this.dicteeActief || this.avontuur.aanHetOefenen)) && !this.stand.dag.klaar)
+    if (telSpeeltijd(this.stand, verstreken, !document.hidden && (this.modus === 'spelen' || this.modus === 'bouwen' || this.dicteeActief || this.avontuur.aanHetOefenen || this.ritme.beatmakerOpen)) && !this.stand.dag.klaar)
       this.sluitDagAf();
     this.bewaarTimer += dt;
     if (this.bewaarTimer >= 15 && (this.modus === 'spelen' || this.dicteeActief)) { this.bewaarTimer = 0; bewaarStand(this.stand); }
@@ -565,13 +638,14 @@ export class Spel {
       for (const o of this.obbies) o.obby.update(dt, weg);
       this.geheimen.update(dt, this.speler, false);
     }
-    if (this.modus === 'spelen' || this.modus === 'scherm') {
-      this.updateCamera(dt);
-      const nummer = this.geheimen.opWolken(this.speler) ? 'geheim' : this.huidigeObby() ? 'obby' : 'eiland';
-      this.muziek.speel(nummer);
-    }
+    if (this.modus === 'spelen' || this.modus === 'scherm') this.updateCamera(dt);
+    if (this.modus === 'bouwen') this.bouwModus.update(dt);
+    if (this.modus === 'spelen' || this.modus === 'scherm' || this.modus === 'bouwen') this.ritme.speel(this.muziekPlek());
+    this.bouwWereld.update(this.speler.pos);
+    this.ritme.update(dt);
     this.updateDieren(dt);
     this.leven.update(dt, this.speler.pos);
+    this.updateMuziekwereld(dt);
     this.updateGlinsters(dt);
     this.effecten.update(dt);
     this.versiering?.update(dt, this.camera.position, this.tijd);
@@ -586,6 +660,122 @@ export class Spel {
     this.zon.target.position.set(p.x, p.y, p.z);
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Lampjes, bloemen, het podium en de muziekmeter bewegen op de maat. */
+  private updateMuziekwereld(dt: number) {
+    const stap = this.ritme.stap;
+    const niveau = this.ritme.niveau;
+    const rustig = this.effecten.rustig;
+    this.feest.update(dt, stap, niveau, this.speler.pos, rustig);
+    this.meter.zet(niveau, this.ritme.huidigeNaam ?? '');
+    this.meter.puls(rustig ? 0 : puls(stap / 4));
+    // Muzieknootjes uit de luidsprekers, op elke tel, als je dichtbij het podium bent.
+    const tel = Math.floor(stap / 4);
+    if (tel === this.laatsteTel) return;
+    this.laatsteTel = tel;
+    const p = this.speler.pos;
+    if (rustig || niveau < 2 || Math.hypot(p.x - PODIUM.x, p.z - PODIUM.z) > 35) return;
+    for (const l of this.feest.luidsprekers) {
+      const kleur = LICHT_KLEUREN[Math.abs(tel + Math.round(l.z)) % LICHT_KLEUREN.length];
+      this.effecten.glinster(l.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, Math.random() * 0.6, (Math.random() - 0.5) * 0.8)), kleur);
+    }
+  }
+
+  /** De muziek staat op volle kracht: een klein feestje (niet te vaak). */
+  private feestje() {
+    if (this.tijd - this.laatsteFeest < 90) return;
+    this.laatsteFeest = this.tijd;
+    window.setTimeout(() => {
+      if (this.modus !== 'spelen' || this.stand.dag.klaar) return;
+      const p = this.speler.pos;
+      this.effecten.vuurwerk(new THREE.Vector3(p.x, p.y + 7, p.z), 3);
+      this.effecten.confetti(new THREE.Vector3(p.x, p.y + 3, p.z));
+      this.hud.meld('🎉 Feestmuziek!');
+    }, 900);
+  }
+
+  /** Tik op de muziekmeter: welk liedje speelt er en hoe maak je het drukker? */
+  private toonMuziekInfo() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    const naam = this.ritme.huidigeNaam ?? 'Muziek';
+    const energie = ENERGIE_NAMEN[Math.max(0, Math.min(4, this.ritme.niveau))];
+    const uitleg = this.ritme.soort === 'meespeel'
+      ? 'Doe dingen goed, dan gaan er steeds meer instrumenten meedoen. Op het discopodium maak je je eigen beat!'
+      : 'Je luistert naar nummers. Kies Meespeelmuziek in de instellingen voor muziek die meegroeit.';
+    this.hud.toonBanner(`♪ <b>${veilig(naam)}</b> · ${energie}<br>${uitleg}`, () => spreek(uitleg), { duur: 6000 });
+  }
+
+  /** Bouwen op de kavel: de camera gaat omhoog en Ninte tikt om te bouwen. */
+  startBouwen() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.modus = 'bouwen';
+    this.besturing.aan = false;
+    this.besturing.loslaten();
+    this.hud.zichtbaar(false);
+    this.hud.verbergBanner();
+    this.bouwModus.start();
+    spreek('Hoi! Ik ben Bas de bouwer. Kies onderin wat je wilt bouwen en tik op het veld.');
+  }
+
+  private stopBouwen() {
+    this.modus = 'spelen';
+    this.besturing.aan = true;
+    this.hud.zichtbaar(true);
+    this.zetSpeler(INGANG, -Math.PI / 2);
+    this.camDoel.set(INGANG.x, 1.8, INGANG.z);
+    bewaarStand(this.stand);
+    this.hud.toonBanner('🏡 Mooi gebouwd! Loop maar eens rond in je bouwwerk.', null, { goed: true, duur: 4500 });
+    this.renderer.domElement.focus({ preventScroll: true });
+  }
+
+  /** Een bouwopdracht gehaald: feest boven de kavel. */
+  private bouwOpdrachtGehaald(hoefijzers: number) {
+    const midden = new THREE.Vector3(KAVEL_MIDDEN.x, 4, KAVEL_MIDDEN.z);
+    this.geluid.fanfare();
+    this.effecten.confetti(midden);
+    this.effecten.vuurwerk(midden.clone().add(new THREE.Vector3(0, 6, 0)), 3);
+    this.geefHoefijzers(hoefijzers, midden);
+    this.ritme.moment('feest');
+    if (BOUW_OPDRACHTEN.every((o) => this.stand.bouwen.voltooid.includes(o.id))) {
+      this.vindGeheim('bouwmeester', 'Bouwmeester', 'Alle bouwopdrachten gehaald! Kijk eens in je kledingkast.');
+    }
+    bewaarStand(this.stand);
+  }
+
+  /** De beatmaker op het discopodium. */
+  toonBeatmaker() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.pauzeer();
+    this.hud.verbergBanner();
+    const beat = kopieBeat(this.stand.ritme.beat ?? voorbeeldBeat());
+    this.ritme.openBeatmaker(beat);
+    beatScherm({
+      beat,
+      voltooid: this.stand.ritme.uitdagingen,
+      stap: () => this.ritme.stap,
+      opWijzig: (b) => this.ritme.wijzigBeat(b),
+      opVoltooid: (u) => {
+        if (!this.stand.ritme.uitdagingen.includes(u.id)) this.stand.ritme.uitdagingen.push(u.id);
+        this.geefHoefijzers(u.beloning);
+        if (UITDAGINGEN.every((x) => this.stand.ritme.uitdagingen.includes(x.id))) {
+          this.vindGeheim('dj-meester', 'DJ-meester', 'Alle beat-uitdagingen gehaald! Kijk eens in je kledingkast.');
+        }
+        bewaarStand(this.stand);
+      },
+      opSpreek: (tekst) => spreek(tekst),
+      opKlik: () => this.geluid.klik(),
+      opKlaar: (b) => {
+        this.stand.ritme.beat = isLeeg(b) ? null : b;
+        bewaarStand(this.stand);
+        this.geluid.klik();
+        this.hervat();
+        this.hud.toonBanner(isLeeg(b) ? '🎧 Het podium speelt weer de discomuziek.' : '🎧 Je eigen beat speelt nu op het discopodium!', null, { goed: true, duur: 4500 });
+      },
+    });
   }
 
   /** Glinsters: op het water, rond gouden hoefijzers en rond de eenhoorn. */
@@ -784,14 +974,16 @@ export class Spel {
     // Een tijdje niks doen? Dan gaat Ninte dansen (een geheimpje).
     const stil = Math.hypot(b.x, b.y) === 0 && !wilSpringen && s.opGrond && !this.huidigeObby();
     this.stilTijd = stil ? this.stilTijd + dt : 0;
-    const dansen = this.stilTijd > DANS_NA;
+    // Op de dansvloer gaat ze meteen dansen, de dieren doen mee.
+    const dansen = this.stilTijd > DANS_NA || (stil && opDansvloer(s.pos));
     if (dansen && !this.dansen) this.vindGeheim('dansje', 'Dansfeest!', `${this.stand.speler} gaat dansen!`);
     this.dansen = dansen;
 
     const tempo = Math.min(1, Math.hypot(s.snelheid.x, s.snelheid.z) / LOOPSNELHEID);
-    const wip = this.avatar.animeer(dt, tempo, !this.wasOpGrond, dansen);
+    const tel = this.ritme.tel;
+    const wip = this.avatar.animeer(dt, tempo, !this.wasOpGrond, dansen, tel);
     this.avatar.groep.position.set(s.pos.x, s.pos.y + wip, s.pos.z);
-    this.avatar.groep.rotation.y = this.kijkHoek + (dansen ? Math.sin(this.tijd * 3.5) * 0.6 : 0);
+    this.avatar.groep.rotation.y = this.kijkHoek + (dansen ? Math.sin((tel * Math.PI) / 2) * 0.6 : 0);
 
     // Regenboogspoor (beloning uit de schatkist)
     if (this.stand.geheimen.includes('schatkist') && tempo > 0.2 && s.opGrond) {
@@ -930,7 +1122,7 @@ export class Spel {
       const doel = inObby
         ? inObby.wachtplek(0)
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, -2.0).addScaledVector(voor, -0.4));
-      this.pony.update(dt, doel, this.dansen);
+      this.pony.update(dt, doel, this.dansen, this.ritme.tel);
     }
     if (this.puppy) {
       const doel = verzorging?.taak === 'apporteren' && verzorging.tijd < 4.5
@@ -938,7 +1130,7 @@ export class Spel {
         : inObby
         ? inObby.wachtplek(1)
         : opEiland(new THREE.Vector3(s.x, 0, s.z).addScaledVector(zij, 1.5).addScaledVector(voor, 0.2));
-      this.puppy.update(dt, doel, this.dansen);
+      this.puppy.update(dt, doel, this.dansen, this.ritme.tel);
     }
   }
 
@@ -983,6 +1175,7 @@ export class Spel {
     const kledingVoor = beschikbareItems(this.stand);
     this.stand.geheimen.push(id);
     bewaarStand(this.stand);
+    this.ritme.moment('feest');
     this.geluid.magie();
     const p = this.speler.pos;
     this.effecten.goudregen(new THREE.Vector3(p.x, p.y + 2.5, p.z));
@@ -1067,6 +1260,7 @@ export class Spel {
     if (!this.effecten.rustig) this.hud.vliegHoefijzers(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight, n);
     this.hud.zetHoefijzers(this.stand.hoefijzers, true);
     this.hud.meld(`+${n}`);
+    this.ritme.moment('goed');
     this.geluid.munt();
     bewaarStand(this.stand);
   }
@@ -1157,6 +1351,7 @@ export class Spel {
         case 'finish': {
           o.klaar = true;
           this.stand.obbyGehaald++;
+          this.ritme.moment('feest');
           this.geluid.fanfare();
           this.effecten.confetti(o.obby.bekerPositie);
           this.effecten.vuurwerk(o.obby.bekerPositie.clone().add(new THREE.Vector3(0, 5, 0)));

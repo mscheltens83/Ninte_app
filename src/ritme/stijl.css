@@ -1,0 +1,78 @@
+/* Muziekmeter naast de hoefijzers: vier balkjes die op de maat meedansen. */
+#muziekmeter {
+  --puls: 0;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 34px;
+  margin-left: 6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: #f1ecff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+#muziekmeter span {
+  width: 6px;
+  height: calc(8px + var(--i) * 5px);
+  border-radius: 3px;
+  background: #d6cdea;
+  transform-origin: bottom;
+  transition: background 0.3s;
+}
+#muziekmeter span.aan { transform: scaleY(calc(0.75 + var(--puls) * 0.35)); }
+#muziekmeter span.aan:nth-child(1) { background: #4fdc7a; }
+#muziekmeter span.aan:nth-child(2) { background: #4fb8ff; }
+#muziekmeter span.aan:nth-child(3) { background: #b57bff; }
+#muziekmeter span.aan:nth-child(4) { background: #ff4f8b; }
+#muziekmeter.feest { background: linear-gradient(90deg, #ffe3f0, #fff4c9, #e0f7ff); box-shadow: 0 0 calc(var(--puls) * 12px) #ff9bd2; }
+.minder-effecten #muziekmeter span.aan { transform: none; }
+.minder-effecten #muziekmeter.feest { box-shadow: none; }
+
+/* Beatmaker */
+.beatmaker { width: min(880px, 100%); text-align: left; padding: 22px; }
+.beatmaker h2 { text-align: center; }
+.beat-uitdaging { margin: 12px 0; padding: 12px 16px; border-radius: 16px; background: #f6f1ff; border: 2px solid #ddd0fb; }
+.beat-uitdaging h3 { margin: 0 0 6px; font-size: 19px; color: #4b2a9e; }
+.beat-uitdaging p { margin: 6px 0; font-size: 17px; line-height: 1.4; }
+.beat-uitdaging .tip { background: #fff8d9; border-radius: 10px; padding: 8px 12px; }
+.beat-goed { font-weight: 800; color: #1c7a40; }
+.beat-hulp { display: flex; gap: 8px; flex-wrap: wrap; }
+.beat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.beat-chips .chip { min-width: 40px; min-height: 40px; border-radius: 20px; border: 3px solid #e4e0f0; background: white; font: inherit; font-weight: 800; color: var(--inkt); cursor: pointer; }
+.beat-chips .chip.klaar { background: #dff7e6; border-color: #7ad49a; color: #1c7a40; }
+.beat-chips .chip.gekozen { border-color: var(--paars); box-shadow: 0 0 0 2px #cbb8ff; }
+
+.beat-rooster { display: grid; gap: 5px; overflow-x: auto; padding: 4px 2px 8px; }
+.beat-rij { display: grid; grid-template-columns: 96px repeat(16, minmax(28px, 1fr)); gap: 4px; align-items: center; }
+.beat-rij > :nth-child(4n + 2):not(:nth-child(2)) { margin-left: 6px; }
+.beat-naam { font-weight: 800; font-size: 15px; white-space: nowrap; }
+.beat-kop span { text-align: center; color: #9a91b3; font-weight: 700; }
+.beat-kop span.tel { color: #4b2a9e; font-size: 18px; }
+.beat-rij.doel .beat-naam { color: #7b4dff; }
+.beat-rij.doel .vakje { border-color: #b9a2ff; }
+.vakje { aspect-ratio: 1; min-height: 28px; border-radius: 9px; border: 3px solid #e4e0f0; background: #faf8ff; cursor: pointer; padding: 0; transition: transform 0.08s, background 0.15s; }
+.vakje:nth-of-type(4n + 1) { background: #f0eafc; }
+.vakje.aan { border-color: transparent; }
+.beat-rij[data-rij='boem'] .vakje.aan { background: #ff4f8b; }
+.beat-rij[data-rij='klap'] .vakje.aan { background: #ffb13b; }
+.beat-rij[data-rij='tik'] .vakje.aan { background: #ffe34d; }
+.beat-rij[data-rij='koe'] .vakje.aan { background: #4fdc7a; }
+.beat-rij[data-rij='bas'] .vakje.aan { background: #4fb8ff; }
+.beat-rij[data-rij='bel'] .vakje.aan { background: #b57bff; }
+.vakje.nu { transform: scale(1.12); box-shadow: 0 0 0 2px #2b2340 inset; }
+.vakje.aan.nu { filter: brightness(1.15); }
+.minder-effecten .vakje.nu { transform: none; }
+
+.beat-tempo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; font-weight: 700; }
+.beat-tempo input[type='range'] { flex: 1; min-width: 140px; accent-color: #7b4dff; height: 32px; }
+.beat-tempo output { font-size: 24px; font-weight: 800; min-width: 3ch; text-align: center; color: #4b2a9e; }
+.beat-knoppen { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.beat-knoppen .knop { width: auto; }
+
+@media (max-width: 600px) {
+  .beatmaker { padding: 16px 12px; }
+  .beat-rij { grid-template-columns: 70px repeat(16, 28px); gap: 3px; }
+  .beat-naam { font-size: 13px; }
+}

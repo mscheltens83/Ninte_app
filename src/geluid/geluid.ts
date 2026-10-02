@@ -5,6 +5,8 @@ type Golf = OscillatorType;
 export class Geluid {
   private ctx: AudioContext | null = null;
   aan = true;
+  /** Optioneel: brengt elke toon naar de toonsoort van de muziek die nu speelt. */
+  stemming: ((freq: number) => number) | null = null;
 
   /** De audio-context, pas beschikbaar na de eerste tik. */
   get context(): AudioContext | null {
@@ -28,6 +30,10 @@ export class Geluid {
     if (!this.aan || !this.ctx) return;
     const ctx = this.ctx;
     const t = ctx.currentTime + start;
+    if (this.stemming) {
+      freq = this.stemming(freq);
+      if (naarFreq) naarFreq = this.stemming(naarFreq);
+    }
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = golf;
@@ -133,6 +139,17 @@ export class Geluid {
   kist() {
     this.toon(220, 0, 0.12, 'square', 0.06, 180);
     [784, 988, 1175, 1568].forEach((f, i) => this.toon(f, 0.15 + i * 0.09, 0.3, 'triangle', 0.14));
+  }
+
+  /** Iets neerzetten tijdens het bouwen: een houten tikje. */
+  bouw() {
+    this.toon(520, 0, 0.07, 'square', 0.05, 390);
+    this.ruis(0, 0.07, 0.1, 900);
+  }
+
+  /** Iets weghalen tijdens het bouwen. */
+  gum() {
+    this.toon(760, 0, 0.13, 'sine', 0.08, 320);
   }
 
   blaf() {

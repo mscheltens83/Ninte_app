@@ -97,7 +97,7 @@ export abstract class Dier {
   }
 
   /** Beweeg richting `doel` (op de grond) en animeer. `dansen`: meehuppelen. */
-  update(dt: number, doel: THREE.Vector3, dansen = false) {
+  update(dt: number, doel: THREE.Vector3, dansen = false, tel?: number) {
     this.tijd += dt;
     if (this.rustend) {
       this.snelheid.set(0, 0, 0);
@@ -145,7 +145,7 @@ export abstract class Dier {
     this.snelheid.lerp(gewenst, Math.min(1, dt * 6));
     pos.x += this.snelheid.x * dt;
     pos.z += this.snelheid.z * dt;
-    const hup = dansen ? Math.abs(Math.sin(this.tijd * 7)) * 0.45 : 0;
+    const hup = dansen ? Math.abs(Math.sin(tel === undefined ? this.tijd * 7 : (tel + 0.5) * Math.PI)) * 0.45 : 0;
     pos.y += (doel.y + hup - pos.y) * Math.min(1, dt * 12);
 
     const v = this.snelheid.length();

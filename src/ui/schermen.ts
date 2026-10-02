@@ -227,6 +227,9 @@ export interface InstellingenOpties {
   muziekAan: boolean;
   nummers: MuziekRegel[];
   huidigNummer: string | null;
+  /** meespeel = muziek die meegroeit met het spel; nummers = de MP3-afspeellijsten */
+  muziekSoort: 'meespeel' | 'nummers';
+  opMuziekSoort(soort: 'meespeel' | 'nummers'): void;
   opVolgende(): void;
   opToevoegen(bestanden: FileList, plek: Plek): void;
   opVerwijder(id: string): void;
@@ -265,7 +268,14 @@ export function instellingenScherm(o: InstellingenOpties) {
       <button class="knop wit" data-ouders>Voor ouders · leren en voortgang</button>
       ${schakelaar('geluid', 'Geluidjes', o.geluidAan)}
       ${schakelaar('muziek', 'Muziek', o.muziekAan)}
-      <div class="rij"><span class="nu-speelt">♪ ${veilig(o.huidigNummer ?? '...')}</span><button class="tempo-knop" data-volgende>⏭ Ander nummer</button></div>
+      <div class="rij"><span>Soort muziek</span><div class="tempo">
+        <button class="tempo-knop${o.muziekSoort === 'meespeel' ? ' gekozen' : ''}" data-soort="meespeel" aria-pressed="${o.muziekSoort === 'meespeel'}">🎵 Meespeel</button>
+        <button class="tempo-knop${o.muziekSoort === 'nummers' ? ' gekozen' : ''}" data-soort="nummers" aria-pressed="${o.muziekSoort === 'nummers'}">💿 Nummers</button>
+      </div></div>
+      <p class="klein">${o.muziekSoort === 'meespeel'
+        ? 'Meespeelmuziek past zich aan aan waar je bent. Hoe meer je goed doet, hoe meer instrumenten er meedoen.'
+        : 'Je hoort de nummers hieronder. Eigen muziek toevoegen kan ook.'}</p>
+      <div class="rij"><span class="nu-speelt">♪ ${veilig(o.huidigNummer ?? '...')}</span><button class="tempo-knop" data-volgende ${o.muziekSoort === 'meespeel' ? 'hidden' : ''}>⏭ Ander nummer</button></div>
       <details class="muzieklijst">
         <summary>Alle muziek (${o.nummers.length})</summary>
         ${PLEKKEN.map(
@@ -276,7 +286,7 @@ export function instellingenScherm(o: InstellingenOpties) {
         ).join('')}
       </details>
       <h3>Eigen muziek toevoegen</h3>
-      <p class="klein">Kies een MP3 van de iPad. Waar moet het nummer spelen?</p>
+      <p class="klein">Kies een MP3 van de iPad. Waar moet het nummer spelen? Je hoort eigen nummers als je hierboven Nummers kiest.</p>
       <div class="tempo">${PLEKKEN.map(([plek, naam], i) => `<button class="tempo-knop${i === 0 ? ' gekozen' : ''}" data-plek="${plek}">${naam}</button>`).join('')}</div>
       <button class="knop blauw" data-toevoegen>＋ Muziek kiezen</button>
       <input type="file" accept="audio/*,.mp3,.m4a" multiple hidden data-bestand />
@@ -319,6 +329,15 @@ export function instellingenScherm(o: InstellingenOpties) {
   knop(s, '[data-klaar]', o.opSluit);
   knop(s, '[data-inspreken]', o.opInspreken);
   knop(s, '[data-volgende]', o.opVolgende);
+  s.querySelectorAll<HTMLButtonElement>('[data-soort]').forEach((b) =>
+    b.addEventListener('click', () => {
+      s.querySelectorAll<HTMLButtonElement>('[data-soort]').forEach((x) => {
+        x.classList.toggle('gekozen', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      o.opMuziekSoort(b.dataset.soort === 'nummers' ? 'nummers' : 'meespeel');
+    }),
+  );
   let plek: Plek = 'eiland';
   s.querySelectorAll<HTMLButtonElement>('[data-plek]').forEach((b) =>
     b.addEventListener('click', () => {

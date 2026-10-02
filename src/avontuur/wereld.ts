@@ -5,7 +5,8 @@ import { BOS_BEWONERS, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, TOREN, V
 import { brugMaten, heeftVleugel, type AvontuurStand, type RobotStand } from './logica';
 import { TERRASSEN, HEUVEL_TRAPPEN, terreinHoogte, torenTrappen, bewonerPos } from './landschap';
 
-export interface Interactie { id: string; naam: string; x: number; y?:number; z: number; soort: 'gebied' | 'materiaal' | 'bewoner' | 'vlag' | 'onderdeel' | 'vleugel'; gebied?: Gebied }
+/** Iets in de wereld waar je bij kunt drukken op E of de knop. Met `doe` kan elk onderdeel van het spel zijn eigen actie toevoegen. */
+export interface Interactie { id: string; naam: string; x: number; y?:number; z: number; soort: 'gebied' | 'materiaal' | 'bewoner' | 'vlag' | 'onderdeel' | 'vleugel' | 'actie'; gebied?: Gebied; doe?: () => void }
 export const BRUG_START = WERELD.noord;
 export function bouwVleugel():THREE.Group {
   const g=new THREE.Group();for(const kant of [-1,1]){const v=blok(4,.12,2.5,kant<0?'#72cadd':'#b0dcec',kant*2,0,0);v.rotation.z=kant*.16;g.add(v);}

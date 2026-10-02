@@ -190,6 +190,22 @@ export class Avatar {
         g.add(hoorn);
         break;
       }
+      case 'bouwhelm':
+        // Een gele bouwhelm met een klep, zoals die van Bas
+        g.add(blok(0.72, 0.26, 0.72, '#ffd23f', 0, y + 0.08, 0));
+        g.add(blok(0.78, 0.05, 0.86, '#ffd23f', 0, y - 0.04, 0.06));
+        g.add(blok(0.1, 0.3, 0.74, '#ffb000', 0, y + 0.1, 0));
+        break;
+      case 'koptelefoon': {
+        // Een regenboog-koptelefoon voor echte DJ's
+        g.add(blok(0.84, 0.1, 0.14, '#2b2340', 0, y + 0.06, 0));
+        for (const kant of [-1, 1]) {
+          g.add(blok(0.08, 0.32, 0.12, '#2b2340', kant * 0.4, y - 0.1, 0));
+          g.add(blok(0.14, 0.32, 0.32, '#ff4f8b', kant * 0.43, y - 0.36, 0));
+          g.add(blok(0.06, 0.18, 0.18, '#ffe34d', kant * 0.51, y - 0.36, 0));
+        }
+        break;
+      }
       case 'geen':
         break;
     }
@@ -241,11 +257,12 @@ export class Avatar {
    * Loop-, spring- en dansanimatie. `tempo` is 0 (stil) tot 1 (rennen).
    * Geeft terug hoeveel het poppetje omhoog wipt (bij het dansen).
    */
-  animeer(dt: number, tempo: number, inDeLucht: boolean, dansen = false): number {
+  animeer(dt: number, tempo: number, inDeLucht: boolean, dansen = false, tel?: number): number {
     this.tijd += dt;
     this.animeerFlapper(tempo, inDeLucht);
     if (dansen) {
-      this.fase += dt * 7;
+      // Met een tel van de muziek danst ze precies op de maat: elke tel een wip.
+      this.fase = tel === undefined ? this.fase + dt * 7 : (tel + 0.5) * Math.PI;
       const f = this.fase;
       this.linkerArm.rotation.x = -2.7 + Math.sin(f) * 0.35;
       this.rechterArm.rotation.x = -2.7 - Math.sin(f) * 0.35;

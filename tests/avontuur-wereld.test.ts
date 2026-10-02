@@ -16,7 +16,7 @@ vi.mock('../src/leren/voorlezen',()=>({spreek:vi.fn()}));
 beforeEach(()=>{document.body.innerHTML='<div id="schermen"></div><div id="hud"><div id="knoppen-rechts"></div></div><div id="vlak"></div>';localStorage.clear();});
 function fixture(ontdekt=true){
   const stand=nieuweStand();if(ontdekt)stand.avontuur.ontdekt=[...stand.avontuur.gebieden];const spel={scene:new THREE.Scene(),fysica:new Fysica(),modus:'spelen',speler:{pos:{x:3,y:0,z:-53}},hud:{hud:document.getElementById('hud')!,meld:vi.fn(),toonBanner:vi.fn()},
-    pauzeer:vi.fn(),hervat:vi.fn(),zetSpeler:vi.fn(),geluid:{aan:false},muziek:{zetAan:vi.fn()},pasKwaliteitAan:vi.fn()} as unknown as Spel;
+    pauzeer:vi.fn(),hervat:vi.fn(),zetSpeler:vi.fn(),geluid:{aan:false},muziek:{zetAan:vi.fn()},ritme:{zetAan:vi.fn(),moment:vi.fn()},pasKwaliteitAan:vi.fn()} as unknown as Spel;
   const av=new Avontuur(spel,stand);return {stand,spel,av};
 }
 function click(sel:string){const b=document.querySelector<HTMLButtonElement>(sel);expect(b).not.toBeNull();b!.click();}

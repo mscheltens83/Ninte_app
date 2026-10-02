@@ -3,7 +3,7 @@
 // speel je vrij door een opdracht te doen of een geheim te vinden.
 
 export type Kapsel = 'staart' | 'lang' | 'kort' | 'vlechten' | 'knot';
-export type Hoed = 'geen' | 'strik' | 'bloemen' | 'oren' | 'rijcap' | 'cowboy' | 'kroon' | 'hoorn';
+export type Hoed = 'geen' | 'strik' | 'bloemen' | 'oren' | 'rijcap' | 'cowboy' | 'kroon' | 'hoorn' | 'koptelefoon' | 'bouwhelm';
 export type Extra = 'geen' | 'rugzak' | 'cape' | 'zonnebril' | 'vleugels';
 
 export interface Uiterlijk {
@@ -42,7 +42,7 @@ export type Voorwaarde =
   | { soort: 'prijs'; hoefijzers: number }
   | { soort: 'obby'; obby: 'spelling' | 'rekenen' }
   | { soort: 'sterren' }
-  | { soort: 'geheim'; geheim: string };
+  | { soort: 'geheim'; geheim: string; hint?: string };
 
 export interface KastItem {
   id: string;
@@ -70,6 +70,8 @@ export const KAST: KastItem[] = [
   { id: 'hoed-cowboy', soort: 'hoed', waarde: 'cowboy', naam: 'Cowboyhoed', voorwaarde: { soort: 'obby', obby: 'rekenen' } },
   { id: 'hoed-kroon', soort: 'hoed', waarde: 'kroon', naam: 'Gouden kroon', voorwaarde: { soort: 'sterren' } },
   { id: 'hoed-hoorn', soort: 'hoed', waarde: 'hoorn', naam: 'Eenhoornhoorn', voorwaarde: { soort: 'geheim', geheim: 'eenhoorn' } },
+  { id: 'hoed-bouwhelm', soort: 'hoed', waarde: 'bouwhelm', naam: 'Bouwhelm', voorwaarde: { soort: 'geheim', geheim: 'bouwmeester', hint: 'Haal alle bouwopdrachten van Bas' } },
+  { id: 'hoed-koptelefoon', soort: 'hoed', waarde: 'koptelefoon', naam: 'DJ-koptelefoon', voorwaarde: { soort: 'geheim', geheim: 'dj-meester', hint: 'Haal alle beat-uitdagingen op het discopodium' } },
 
   { id: 'extra-geen', soort: 'extra', waarde: 'geen', naam: 'Niks', voorwaarde: gratis },
   { id: 'extra-rugzak', soort: 'extra', waarde: 'rugzak', naam: 'Rugzak', voorwaarde: prijs(20) },
@@ -114,7 +116,7 @@ export function slotTekst(item: KastItem): string {
     case 'sterren':
       return 'Haal een obby met alle deuren in één keer goed';
     case 'geheim':
-      return 'Vind een geheim';
+      return v.hint ?? 'Vind een geheim';
     case 'prijs':
       return `Kost ${v.hoefijzers} hoefijzers`;
     case 'gratis':

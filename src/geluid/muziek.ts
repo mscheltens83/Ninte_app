@@ -132,6 +132,17 @@ export class Muziek {
     void this.start(plek);
   }
 
+  /** Helemaal stoppen (bijv. omdat de meespeelmuziek het overneemt). */
+  stop() {
+    this.gewenst = null;
+    const ctx = this.geluid.context;
+    if (!ctx || !this.huidig) return;
+    const oud = this.huidig;
+    this.huidig = null;
+    oud.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
+    oud.bron.stop(ctx.currentTime + 1.5);
+  }
+
   /** Naar het volgende nummer van deze plek. */
   volgende() {
     if (!this.gewenst) return;

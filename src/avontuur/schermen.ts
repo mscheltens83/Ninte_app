@@ -68,6 +68,8 @@ export class Avontuur {
     const tekst=(m&&s?`${GEBIEDEN.find(g=>g.id===m.gebied)!.icoon} ${m.stappen[s.stap]} · Hulp`:'📖 Kies een avontuur · opdrachten en hulp')+route+(this.spel.zweeft?` · 🪽 ${Math.round(p.y)} m · stuur met WASD / joystick`: '');
     if(tekst!==this.laatsteTaak){this.taakKnop.textContent=tekst;this.laatsteTaak=tekst;}
   }
+  /** Controleer een missie; een voltooide missie is feest, ook in de muziek. */
+  private controleer(id:string){const r=controleerMissie(this.a,id);if(r.goed)this.spel.ritme.moment('feest');return r;}
   stop(){this.uitvoering++;this.aanHetOefenen=false;this.huidigScherm=null;this.opAfsluiten=null;}
   private sluit(){this.stop();sluitScherm();this.spel.hervat();}
   private scherm(titel:string,inhoud:string,leren=false):HTMLDivElement {
@@ -85,6 +87,7 @@ export class Avontuur {
   interactie() {
     if(this.spel.modus!=='spelen'||!this.dichtbij)return;
     const i=this.dichtbij;
+    if(i.doe){i.doe();return;}
     if(i.soort==='onderdeel'){const goed=verzamel(this.a,'toren-vleugel',i.id);this.bewaar();this.spel.hud.toonBanner(goed?`🪽 Onderdeel gevonden! ${this.a.missies['toren-vleugel'].werk.verzameld.length}/3. Bekijk je opdracht voor de volgende aanwijzing.`:'Dit onderdeel is al gevonden, of bouwen staat uit bij Voor ouders.',null,{duur:5000});return;}
     if(i.soort==='vleugel'){const ok=pakVleugel(this.a);this.bewaar();this.spel.hud.toonBanner(ok?'🪽 Je vleugel is van jou! Klim via de trappen naar het vliegdek. Ze opent vanzelf als je van grote hoogte springt.':heeftVleugel(this.a)?'Je zweefvleugel blijft van jou. Klim gerust nog eens naar het dak.':'Help Ravi eerst: zoek de drie onderdelen en maak de vleugel in evenwicht.',null,{duur:6000});return;}
     if(i.soort==='materiaal'||i.soort==='vlag'){
@@ -154,7 +157,7 @@ export class Avontuur {
     this.bindWerk(v,m,s);
     v.querySelector<HTMLButtonElement>('[data-luister]')!.onclick=()=>spreek(`${m.verhaal} ${m.stappen[s.stap]}`);
     v.querySelector<HTMLButtonElement>('[data-hint]')!.onclick=()=>{s.hint=Math.min(3,s.hint+1);this.bewaar();this.toonMissie(id);};
-    v.querySelector<HTMLButtonElement>('[data-controleer]')!.onclick=()=>{const antwoord=v.querySelector<HTMLInputElement>('[data-antwoord]');if(antwoord)s.werk.antwoord=antwoord.value;const r=controleerMissie(this.a,id);this.bewaar();this.toonMissie(id,r.tekst);};
+    v.querySelector<HTMLButtonElement>('[data-controleer]')!.onclick=()=>{const antwoord=v.querySelector<HTMLInputElement>('[data-antwoord]');if(antwoord)s.werk.antwoord=antwoord.value;const r=this.controleer(id);this.bewaar();this.toonMissie(id,r.tekst);};
     v.querySelector<HTMLButtonElement>('[data-kaart]')!.onclick=()=>this.toonKaart();
   }
   private hintInhoud(m:Missie,s:MissieStand):string {
@@ -208,7 +211,7 @@ export class Avontuur {
     const w=s.werk,herteken=()=>{this.bewaar();this.toonMissie(m.id);};
     const bind=(sel:string,fn:(b:HTMLButtonElement)=>void)=>v.querySelectorAll<HTMLButtonElement>(sel).forEach(b=>b.onclick=()=>fn(b));
     const antwoord=v.querySelector<HTMLInputElement>('[data-antwoord]');if(antwoord)antwoord.oninput=()=>{w.antwoord=antwoord.value;this.bewaar();};
-    bind('[data-plaatsvlag]',()=>{const r=controleerMissie(this.a,m.id);this.bewaar();this.toonMissie(m.id,r.tekst);});
+    bind('[data-plaatsvlag]',()=>{const r=this.controleer(m.id);this.bewaar();this.toonMissie(m.id,r.tekst);});
     bind('[data-vlagreis]',()=>this.zoek('dorp','Zoek de gele kist links op het dorpsplein.'));
     bind('[data-materiaalreis]',b=>{const p=MATERIAALPLEKKEN.find(p=>p.id===b.dataset.materiaalreis)!;this.zoek(p.gebied,p.tip);});
     bind('[data-bosreis]',b=>{const p=BOS_BEWONERS.find(p=>p.id===b.dataset.bosreis)!;this.zoek('bos',`Zoek ${p.naam} op de bosheuvel. Fien loopt aan de westkant, Ubo bij het boshuisje en Kiki aan de oostkant.`);});
@@ -263,7 +266,7 @@ export class Avontuur {
         v.querySelectorAll('[data-blok]').forEach(el=>el.classList.toggle('bezig',Number((el as HTMLElement).dataset.blok)===b.blok));
         robot=robotStap(r,robot,b.actie);paint();status.textContent=`Stap ${index+1}/${stappen.length}: ${b.actie}.`;index++;
         if(robot.fout){zetRun(false);status.textContent=robot.fout;return;}
-        if(robot.klaar){zetRun(false);const resultaat=controleerMissie(this.a,m.id);this.bewaar();this.toonMissie(m.id,resultaat.tekst);return;}
+        if(robot.klaar){zetRun(false);const resultaat=this.controleer(m.id);this.bewaar();this.toonMissie(m.id,resultaat.tekst);return;}
         window.setTimeout(stap,this.stand.minderEffecten?180:450);
       };stap();
     };
@@ -287,7 +290,7 @@ export class Avontuur {
       s.querySelectorAll<HTMLSelectElement>('[data-niveau]').forEach(v=>this.a.niveaus[v.dataset.niveau as Onderwerp]=Number(v.value) as 1|2|3);
       this.stand.geluidAan=s.querySelector<HTMLInputElement>('[data-geluid]')!.checked;this.stand.muziekAan=s.querySelector<HTMLInputElement>('[data-muziek]')!.checked;this.stand.minderEffecten=s.querySelector<HTMLInputElement>('[data-rustig]')!.checked;
       this.stand.beeldkwaliteit=s.querySelector<HTMLSelectElement>('#av-kwaliteit')!.value as Spelstand['beeldkwaliteit'];
-      this.spel.geluid.aan=this.stand.geluidAan;this.spel.muziek.zetAan(this.stand.muziekAan);this.spel.pasKwaliteitAan();
+      this.spel.geluid.aan=this.stand.geluidAan;this.spel.ritme.zetAan(this.stand.muziekAan);this.spel.pasKwaliteitAan();
       const ok=bewaarStand(this.stand);s.querySelector('[data-feedback]')!.textContent=ok?'Instellingen bewaard. Je kunt per onderwerp zelf kiezen.':'Deze instellingen werken nu. Maak een back-up: automatisch bewaren is niet gelukt.';
     };
     s.querySelector<HTMLButtonElement>('[data-reset]')!.onclick=()=>{

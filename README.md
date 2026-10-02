@@ -10,6 +10,15 @@ Het dorpsplein verbindt de brug naar een geheim eiland en inrichtbare boomhut me
 
 Zie [HANDLEIDING.md](HANDLEIDING.md) voor starten op Windows, bediening, aanpassen van leerinhoud, opslag en een speeltestchecklist. De taken en controles staan in [UITBREIDING.md](UITBREIDING.md).
 
+## Bouwen en feest
+
+- **Bouwkavel:** links van het dorpsplein staat Bas de bouwer. Druk bij hem op E (of tik) om te bouwen. De camera kijkt dan van bovenaf. Tik of sleep om muren, deuren, ramen, hekjes en vloeren te leggen, of meubels, tuinspullen en stapelblokken te plaatsen. Er zijn 12 kleuren, en je hebt een gum, ↩️ om iets terug te zetten en een dak dat aan of uit kan. Ninte kan haar huis in lopen en op haar toren klimmen.
+- **Bouwopdrachten van Bas:** omtrek (een kamer van 4 bij 3), oppervlakte (16 tegels), een huis met twee kamers, een plattegrond nabouwen, een toren met een hoogtesom en een zwembad met een inhoudsom. Elke opdracht geeft hoefijzers en nieuwe onderdelen. Wie alles haalt, krijgt een bouwhelm.
+- **Feestwereld:** lampjesslingers boven de paden, dansende bloemen, dieren en bewoners die op de maat bewegen, en een discopodium met dansvloer en beatmaker (met reken-uitdagingen en een DJ-koptelefoon als beloning).
+- **Muziek:** standaard de MP3-nummers. In ⚙️ kun je kiezen voor *Meespeel*: zelfgemaakte muziek die drukker wordt als Ninte dingen goed doet.
+
+Uitbreiden: zie `src/bouwen/LEESMIJ.md` en `src/ritme/LEESMIJ.md`.
+
 ## Leren en veilig bewaren
 
 - **Help je dieren (0/6):** typ zes woorden per dag om de pony te voeren en te borstelen en de puppy een bal te laten halen. Eerste antwoorden en verbeteringen worden apart geteld. Het bekijken van een woord telt als hulp.
