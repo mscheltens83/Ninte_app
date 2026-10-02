@@ -62,6 +62,8 @@ const OBBY_OORSPRONG = new THREE.Vector3(29, 0, 7.5);
 const REKEN_OORSPRONG = new THREE.Vector3(29, 0, -18);
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
 const AANTAL_GOUDEN = 5;
+/** Zoveel minuten extra speeltijd geeft "Nog spelen vandaag toestaan". */
+const EXTRA_MINUTEN = 15;
 
 type Modus = 'titel' | 'spelen' | 'scherm' | 'kast' | 'bouwen';
 
@@ -564,11 +566,8 @@ export class Spel {
       this.zetSpeler(STARTPUNT, Math.PI);
       this.zetDagdoel();
     }, opSluit ?? (() => this.hervat()), this.stand.dag.klaar ? () => {
-      if (tijdVoorbij(this.stand)) {
-        const feedback = document.querySelector<HTMLElement>('[data-feedback]');
-        if (feedback) feedback.textContent = 'Verhoog eerst de dagelijkse speeltijd en bewaar de instellingen.';
-        return;
-      }
+      // Speeltijd op? Dan krijgt ze er vandaag nog een kwartier bij.
+      if (tijdVoorbij(this.stand)) this.stand.dag.speelSeconden = Math.max(0, (this.stand.speeltijdMinuten - EXTRA_MINUTEN) * 60);
       this.stand.dag.klaar = false;
       bewaarStand(this.stand);
       this.hervat();

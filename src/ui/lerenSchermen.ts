@@ -138,7 +138,7 @@ export function oudersScherm(stand: Spelstand, opWijzig: () => void, opSluit: ()
     <p class="klein">Download regelmatig een back-up en vóór het wissen van browsergegevens. Het bestand bevat dieren, kleding, hoefijzers, leerresultaten en instellingen. Eigen muziek en stemopnames blijven op dit apparaat en zitten niet in deze back-up.</p>
     <button class="knop wit" data-export>Download voortgang</button><label for="backup-bestand">Herstel uit een back-up</label><input id="backup-bestand" type="file" accept=".json,application/json">
     <p data-importtekst class="feedback" aria-live="polite"></p><button class="knop" data-import hidden>Herstel deze voortgang</button>
-    ${opVerder ? '<button class="knop wit" data-verder>Nog spelen vandaag toestaan</button>' : ''}
+    ${opVerder ? '<button class="knop wit" data-verder>Nog 15 minuten spelen vandaag</button>' : ''}
     <button class="knop wit" data-sluit>Terug</button></div>`);
   const feedback = s.querySelector<HTMLElement>('[data-feedback]')!;
   if (opAvonturen) s.querySelector<HTMLButtonElement>('[data-avonturen]')!.onclick = opAvonturen;
