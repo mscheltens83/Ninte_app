@@ -300,6 +300,7 @@ export function instellingenScherm(o: InstellingenOpties) {
         <b>iPad:</b> Instellingen → Toegankelijkheid → Gesproken materiaal → Stemmen → Nederlands (kies een stem met <b>Verbeterd</b> of <b>Premium</b>).<br>
         <b>Android:</b> Instellingen → zoek op <b>Tekst-naar-spraak</b> → Spraakengine van Google → Nederlands installeren.</p>
       <p class="klein">Ingebouwde muziek: "Carefree", "Monkeys Spinning Monkeys" en "Fluffing a Duck" van Kevin MacLeod (incompetech.com), licentie CC BY 4.0. Eigen muziek blijft alleen op dit apparaat.</p>
+      <p class="klein">Versie ${veilig(__VERSIE__)}</p>
       <button class="knop" data-klaar>Klaar</button>
     </div>`,
   );

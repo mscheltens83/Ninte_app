@@ -130,8 +130,20 @@ spel.hud.uitlegKnop.addEventListener('click', () => {
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     try {
-      navigator.serviceWorker.register('./sw.js').catch(() => {
+      navigator.serviceWorker.register('./sw.js').then((registratie) => {
+        // Terug in de app? Kijk of er een nieuwe versie is.
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) void registratie.update().catch(() => {}); });
+      }).catch(() => {
         // Geen service worker: het spel werkt dan alleen online.
+      });
+      // Neemt een nieuwe versie het over, dan één keer herladen. Alleen als er al een oude versie draaide.
+      const hadVersie = !!navigator.serviceWorker.controller;
+      let herladen = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadVersie || herladen) return;
+        herladen = true;
+        bewaarStand(stand);
+        location.reload();
       });
     } catch {
       // Sommige omgevingen (zoals een ingesloten pagina) staan dit niet toe.

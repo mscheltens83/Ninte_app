@@ -2,7 +2,8 @@
 // Pagina's: eerst online proberen (zo krijg je updates), anders de bewaarde versie.
 // Overige bestanden: bewaarde versie gebruiken (ze hebben unieke namen per versie).
 
-const CACHE = 'nintes-wereld-v1';
+// Verhoog dit nummer als de manier van bewaren verandert.
+const CACHE = 'nintes-wereld-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest'])));
@@ -22,7 +23,8 @@ self.addEventListener('fetch', (event) => {
 
   if (verzoek.mode === 'navigate') {
     event.respondWith(
-      fetch(verzoek)
+      // Altijd vers ophalen (niet uit de browsergeheugen), zodat een update meteen zichtbaar is.
+      fetch(verzoek.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then((antwoord) => {
           const kopie = antwoord.clone();
           caches.open(CACHE).then((c) => c.put('./index.html', kopie));
