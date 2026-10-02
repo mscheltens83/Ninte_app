@@ -20,14 +20,14 @@ export const GROEP_UITLEG: Record<InspreekGroep, string> = {
   Begroeten: 'Als het spel begint.',
   Aanmoedigen: 'Bij een goed antwoord kiest het spel er steeds eentje uit. Hoe meer je er inspreekt, hoe meer afwisseling.',
   Troosten: 'Bij een fout antwoord, voordat het trucje komt. Ook hier kiest het spel er steeds eentje uit.',
-  'Uitleg en beloning': 'Bij de obby, de finish, geheimen en nieuwe kleding. Deze zinnen passen bij spelling én rekenen.',
+  'Uitleg en beloning': 'Bij de deurenbaan, de finish, geheimen en nieuwe kleding. Deze zinnen passen bij spelling én rekenen.',
   'Woorden voor het dictee': 'Alleen het woord zelf, bijvoorbeeld "paard". De zin staat al op het bord. Nieuwe woorden spreek je later op dezelfde manier in.',
 };
 
 export const INSPREEK_ZINNEN: InspreekZin[] = [
   { sleutel: 'hoi', tekst: 'Hoi Ninte!', groep: 'Begroeten' },
   { sleutel: 'welkom', tekst: 'Welkom in Nintes Wereld!', groep: 'Begroeten' },
-  { sleutel: 'volg-bordjes', tekst: "Volg de bordjes naar de obby's!", groep: 'Begroeten' },
+  { sleutel: 'volg-bordjes', tekst: 'Volg de bordjes naar de deurenbanen!', groep: 'Begroeten' },
 
   { sleutel: 'goed-1', tekst: 'Goed zo!', groep: 'Aanmoedigen' },
   { sleutel: 'goed-2', tekst: 'Super!', groep: 'Aanmoedigen' },
@@ -40,7 +40,7 @@ export const INSPREEK_ZINNEN: InspreekZin[] = [
   { sleutel: 'fout-3', tekst: 'Geeft niks, probeer het nog een keer!', groep: 'Troosten' },
 
   { sleutel: 'kies-deur', tekst: 'Loop steeds door de deur met het goede antwoord.', groep: 'Uitleg en beloning' },
-  { sleutel: 'obby-gehaald', tekst: 'Je hebt de obby gehaald! Goed gedaan!', groep: 'Uitleg en beloning' },
+  { sleutel: 'obby-gehaald', tekst: 'Je hebt de deurenbaan gehaald! Goed gedaan!', groep: 'Uitleg en beloning' },
   { sleutel: 'geheim', tekst: 'Je hebt een geheim gevonden!', groep: 'Uitleg en beloning' },
   { sleutel: 'hoefijzer', tekst: 'Een gouden hoefijzer!', groep: 'Uitleg en beloning' },
   { sleutel: 'kleding', tekst: 'Er hangt iets nieuws in je kledingkast!', groep: 'Uitleg en beloning' },

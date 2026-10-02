@@ -18,7 +18,7 @@ export const GEHEIMEN: GeheimInfo[] = [
   { id: 'eenhoorn', naam: 'Magische pony', hint: 'Wat zou er gebeuren als je alle gouden hoefijzers vindt?' },
   { id: 'trampoline', naam: 'Boing!', hint: 'Achter de stal staat iets waar je heel hoog op kunt springen.' },
   { id: 'eilandje', naam: 'Palmeilandje', hint: 'Zie je in de verte een palmboom? Misschien kun je erheen springen.' },
-  { id: 'wolkeneiland', naam: 'Wolkeneiland', hint: 'Kijk eens goed omhoog bij de finish van de Deuren-obby.' },
+  { id: 'wolkeneiland', naam: 'Wolkeneiland', hint: 'Kijk eens goed omhoog bij de finish van de Deurenbaan.' },
   { id: 'schatkist', naam: 'Schatkist', hint: 'Op de achterkant van een bord staat een geheim wachtwoord.' },
   { id: 'dansje', naam: 'Dansfeest', hint: 'Wat doet Ninte als ze een tijdje helemaal niks doet?' },
   { id: 'zoomies', naam: 'Zoomies!', hint: 'Tik heel vaak snel achter elkaar op je puppy.' },

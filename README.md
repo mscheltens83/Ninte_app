@@ -1,12 +1,12 @@
 # Nintes Wereld
 
-Een Roblox-achtig leerspel voor Ninte (9 jaar, groep 6). Ze zorgt voor haar eigen pony en puppy, doet obby's en verdient hoefijzers door goed te spellen. De spelling sluit aan op **Staal**.
+Een Roblox-achtig leerspel voor Ninte (9 jaar, groep 6). Ze zorgt voor haar eigen pony en puppy, doet deurenbanen en verdient hoefijzers door goed te spellen. De spelling sluit aan op **Staal**.
 
 Het volledige plan staat in [PLAN.md](PLAN.md).
 
 ## Avonturenwereld
 
-Het dorpsplein verbindt de brug naar een geheim eiland en inrichtbare boomhut met de dorpswinkel, het verhalenbos, pizzacafé, uitvinderslab en natuurtuin. Er zijn 18 speelbare missies met materialen, unieke decoratiebeloningen, hints in drie stappen en bewaarde voortgang. Dieren en obby's blijven bereikbaar.
+Het dorpsplein verbindt de brug naar een geheim eiland en inrichtbare boomhut met de dorpswinkel, het verhalenbos, pizzacafé, uitvinderslab en natuurtuin. Er zijn 18 speelbare missies met materialen, unieke decoratiebeloningen, hints in drie stappen en bewaarde voortgang. Dieren en deurenbanen blijven bereikbaar.
 
 Zie [HANDLEIDING.md](HANDLEIDING.md) voor starten op Windows, bediening, aanpassen van leerinhoud, opslag en een speeltestchecklist. De taken en controles staan in [UITBREIDING.md](UITBREIDING.md).
 
@@ -36,7 +36,7 @@ Een back-up bevat voortgang en instellingen. Eigen muziek en ingesproken audio z
 
 - Een blokjeseiland in Roblox-stijl met een stal, een wei, een hondenhok en veel bomen.
 - Een eigen **pony en puppy**. Ninte kiest de kleur en typt zelf de naam. Begint de naam met een kleine letter, dan krijgt ze de tip dat namen met een hoofdletter beginnen. De dieren lopen naast haar, en op de stal staat de naam van haar pony.
-- De **Deuren-obby**: 6 poorten met steeds twee deuren. De ene deur heeft de goede spelling, de andere de foute (bijvoorbeeld `paard` of `paart`).
+- De **Deurenbaan**: 6 poorten met steeds twee deuren. De ene deur heeft de goede spelling, de andere de foute (bijvoorbeeld `paard` of `paart`).
   - Kiest ze de goede deur, dan gaat die open en krijgt ze confetti en hoefijzers.
   - Kiest ze de foute, dan gaat er een valluik open en ploft ze zachtjes in het hooi. Daarna ziet ze het trucje van Staal ("Langermaakwoord! Maak het woord langer: paarden …") en mag ze het opnieuw proberen.
 - Woorden uit drie Staal-categorieën: **langermaakwoord** (d/t), **weetwoord ei/ij** en **weetwoord au/ou**. Het zijn samen 53 woorden, allemaal over paarden, honden en de boerderij.
@@ -44,10 +44,10 @@ Een back-up bevat voortgang en instellingen. Eigen muziek en ingesproken audio z
 - **Voorlezen** met de Nederlandse stem van de iPad, net als bij een dictee: woord, zin, woord.
 - Besturing zoals Roblox op de iPad: een joystick links, een springknop rechts en vegen om rond te kijken.
 - Geen game-over, geen tijdsdruk, geen chat en geen aankopen. De voortgang blijft op de iPad zelf bewaard.
-- **Echte muziek**: een vrolijk nummer op het eiland, een snel nummer in de obby en een grappig nummer op een geheime plek.
+- **Echte muziek**: een vrolijk nummer op het eiland, een snel nummer in de deurenbaan en een grappig nummer op een geheime plek.
 - **Instellingen** (⚙️): geluidjes en muziek aan of uit, zelf de mooiste voorleesstem kiezen en het tempo instellen.
-- **Reken-obby**: een tweede obby met tafelsommen, deelsommen, plus en min tot 1000 en keersommen met een nul. Het vraagbord is een schoolbord, en bij een fout krijgt Ninte een trucje (bijvoorbeeld *"Eerst 5 × 7 = 35, en dan nog 7 erbij: 42"*). Tafelsommen die vaak misgaan, komen vaker terug.
-- **Kledingkast** (👕): kapsel, haarkleur, huidskleur, kleding, hoeden en extra's zoals een cape of vleugels. Sommige dingen koop je met hoefijzers, andere speel je vrij: een rijcap voor de Deuren-obby, een cowboyhoed voor de Reken-obby, een gouden kroon voor alle deuren in één keer goed, en vleugels, een zonnebril en een eenhoornhoorn voor geheimen. De eerste keer maakt Ninte vooraf haar eigen poppetje.
+- **Rekenbaan**: een tweede deurenbaan met tafelsommen, deelsommen, plus en min tot 1000 en keersommen met een nul. Het vraagbord is een schoolbord, en bij een fout krijgt Ninte een trucje (bijvoorbeeld *"Eerst 5 × 7 = 35, en dan nog 7 erbij: 42"*). Tafelsommen die vaak misgaan, komen vaker terug.
+- **Kledingkast** (👕): kapsel, haarkleur, huidskleur, kleding, hoeden en extra's zoals een cape of vleugels. Sommige dingen koop je met hoefijzers, andere speel je vrij: een rijcap voor de Deurenbaan, een cowboyhoed voor de Rekenbaan, een gouden kroon voor alle deuren in één keer goed, en vleugels, een zonnebril en een eenhoornhoorn voor geheimen. De eerste keer maakt Ninte vooraf haar eigen poppetje.
 - **Zelf inspreken** (⚙️ → 🎙️): 19 universele zinnen die bij elk woord en elke som passen (begroeten, aanmoedigen, troosten, uitleg en beloning), plus los de 53 woorden voor het dictee (alleen het woord zelf). Bij aanmoedigen en troosten kiest het spel steeds een andere zin. Wat je hebt ingesproken, vervangt de computerstem; stilte aan het begin en eind wordt automatisch weggeknipt. Werkt in de app-versie op iPad en Android, niet in de claude.ai-link (daar mag de microfoon niet).
 - **Meer effecten**: vuurwerk, stofwolkjes bij het springen, vlinders, springende vissen, glinsters op het water, hoefijzers die naar de teller vliegen en een toverwolk bij het omkleden.
 - **Geheimen** (⭐): 9 easter eggs om te ontdekken. Het geheimenboek geeft hints. Spoiler: zie hieronder.
@@ -60,7 +60,7 @@ Een back-up bevat voortgang en instellingen. Eigen muziek en ingesproken audio z
 | Magische pony | Alle 5 gouden hoefijzers vinden | De pony wordt een eenhoorn met regenboogmanen |
 | Boing! | Op de trampoline achter de stal springen (zo kom je ook op het staldak) | Superhoge sprong |
 | Palmeilandje | Via de stapstenen in de noordwesthoek naar het eilandje springen | Een gouden hoefijzer |
-| Wolkeneiland | Bij de finish van de Deuren-obby het wolkenpad omhoog volgen | Regenboog, geheim muziekje, gouden hoefijzer |
+| Wolkeneiland | Bij de finish van de Deurenbaan het wolkenpad omhoog volgen | Regenboog, geheim muziekje, gouden hoefijzer |
 | Schatkist | Het wachtwoord staat op de achterkant van het welkomstbord; de kist staat in de stal. Het wachtwoord moet ze goed spellen! | 20 hoefijzers en een regenboogspoor achter Ninte |
 | Dansfeest | 12 seconden stilstaan | Ninte en de dieren dansen |
 | Zoomies | 5 keer snel op de puppy tikken | De puppy rent rondjes |
@@ -109,7 +109,7 @@ Voor geautomatiseerde tests kun je `?test` achter het adres zetten. Het spel is 
 src/
   main.ts            opstarten, titelscherm, dieren kiezen
   spel/              het spel zelf, besturing (touch + toetsenbord), botsingen
-  wereld/            eiland, Deuren-obby, bouwblokjes, confetti
+  wereld/            eiland, Deurenbaan, bouwblokjes, confetti
   figuren/           avatar, pony en puppy (uit blokjes)
   leren/             woordkaarten, spelling-trucjes, herhaalbakjes, voorlezen
   ui/                balk bovenin en schermen (tip, finish, uitleg)
@@ -133,14 +133,14 @@ De foute variant voor de deur (`paart`) en het trucje maakt het spel zelf. `npm 
 De ingebouwde muziek is van Kevin MacLeod ([incompetech.com](https://incompetech.com)) en valt onder de licentie [Creative Commons Naamsvermelding 4.0](https://creativecommons.org/licenses/by/4.0/):
 
 - `src/muziek/eiland/carefree.mp3`: "Carefree"
-- `src/muziek/obby/monkeys-spinning-monkeys.mp3`: "Monkeys Spinning Monkeys"
+- `src/muziek/deurenbaan/monkeys-spinning-monkeys.mp3`: "Monkeys Spinning Monkeys"
 - `src/muziek/geheim/fluffing-a-duck.mp3`: "Fluffing a Duck"
 
 ### Meer muziek toevoegen
 
 Er zijn twee manieren:
 
-1. **Op de iPad zelf**: ⚙️ → *Eigen muziek toevoegen*. Kies waar het nummer moet spelen (eiland, obby's of geheime plek) en kies een MP3 uit de Bestanden-app. Het nummer blijft alleen op die iPad.
-2. **In het spel zelf (voor elk apparaat)**: zet MP3-bestanden in de juiste map in `src/muziek/` (`eiland/`, `obby/` of `geheim/`). Via de GitHub-website: open de map, kies **Add file → Upload files** en sleep de MP3's erin. Na het bouwen staan ze vanzelf in de afspeellijst.
+1. **Op de iPad zelf**: ⚙️ → *Eigen muziek toevoegen*. Kies waar het nummer moet spelen (eiland, deurenbanen of geheime plek) en kies een MP3 uit de Bestanden-app. Het nummer blijft alleen op die iPad.
+2. **In het spel zelf (voor elk apparaat)**: zet MP3-bestanden in de juiste map in `src/muziek/` (`eiland/`, `deurenbaan/` of `geheim/`). Via de GitHub-website: open de map, kies **Add file → Upload files** en sleep de MP3's erin. Na het bouwen staan ze vanzelf in de afspeellijst.
 
 Heeft een plek meer nummers, dan speelt het spel ze na elkaar af. Met ⏭ in de instellingen ga je naar het volgende nummer. Tip: kleine bestanden (mono, 64 kbps) laden sneller. Gebruik muziek die je mag gebruiken. Voor thuisgebruik is gekochte muziek prima, maar zet de app dan niet openbaar online.

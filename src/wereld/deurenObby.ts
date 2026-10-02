@@ -25,7 +25,7 @@ export interface ObbyThema {
 
 export const SPELLING_THEMA: ObbyThema = {
   id: 'spelling',
-  naam: 'Deuren-obby',
+  naam: 'Deurenbaan',
   kleur: '#ff6f91',
   platforms: ['#ff6f91', '#ffc75f', '#4fc3f7', '#9ccc65', '#ba68c8', '#ff9f68'],
   deuren: ['#4a90e2', '#f5a623'],
@@ -34,7 +34,7 @@ export const SPELLING_THEMA: ObbyThema = {
 
 export const REKEN_THEMA: ObbyThema = {
   id: 'rekenen',
-  naam: 'Reken-obby',
+  naam: 'Rekenbaan',
   kleur: '#3a86ff',
   platforms: ['#3a86ff', '#2ec4b6', '#8ac926', '#ffca3a', '#4cc9f0', '#80ed99'],
   deuren: ['#35c46a', '#a35be0'],

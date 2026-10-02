@@ -10,7 +10,7 @@ import type { Geluid } from './geluid';
 export type Plek = 'eiland' | 'obby' | 'geheim';
 export const PLEKKEN: [Plek, string][] = [
   ['eiland', 'Eiland'],
-  ['obby', "Obby's"],
+  ['obby', 'Deurenbanen'],
   ['geheim', 'Geheime plek'],
 ];
 

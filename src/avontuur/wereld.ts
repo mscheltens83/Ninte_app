@@ -115,7 +115,7 @@ export class AvontuurWereld {
     this.interacties.push({id:'boomhut',naam:'Richt je boomhut in',x:0,z:0,soort:'gebied',gebied:'boomhut'});
     this.bord(this.groep,'↑ Tuin & rivier\n← Winkel   Café →',0,2.5,-94,'#547646',5);
     this.bord(this.groep,'↑ Rivier\n← Bosheuvel   Lab →',0,2.5,-206,'#547646',5);
-    this.bord(this.groep,'↑ Dorpsplein\n↓ Dieren & obby’s',0,2.8,-40,'#b48b40',5);
+    this.bord(this.groep,'↑ Dorpsplein\n↓ Dieren & deurenbanen',0,2.8,-40,'#b48b40',5);
     for(const p of VLIEG_ONDERDELEN){const g=new THREE.Group();g.position.set(p.x,p.y,p.z);g.add(blokOp(1.1,.55,.9,p.id==='doek'?'#e894bb':p.id==='frame'?'#968ae0':'#e7cb61',0,0,0));g.userData.dynamisch=true;this.groep.add(g);this.onderdelen.set(p.id,g);this.bord(this.groep,`🪽 ${p.naam}`,p.x,p.y+1.6,p.z,'#598ca0',2.8);this.interacties.push({id:p.id,naam:`Onderzoek · ${p.naam}`,x:p.x,y:p.y,z:p.z,soort:'onderdeel'});}
     this.bouwToren();
     this.vliegRek.position.set(107,2,-115);this.vliegRek.scale.setScalar(.5);this.interacties.push({id:'zweefvleugel',naam:'Pak je zweefvleugel',x:107,y:0,z:-115,soort:'vleugel'});

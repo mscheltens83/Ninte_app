@@ -112,9 +112,9 @@ export function slotTekst(item: KastItem): string {
   const v = item.voorwaarde;
   switch (v.soort) {
     case 'obby':
-      return v.obby === 'spelling' ? 'Haal de Deuren-obby' : 'Haal de Reken-obby';
+      return v.obby === 'spelling' ? 'Haal de Deurenbaan' : 'Haal de Rekenbaan';
     case 'sterren':
-      return 'Haal een obby met alle deuren in één keer goed';
+      return 'Haal een deurenbaan met alle deuren in één keer goed';
     case 'geheim':
       return v.hint ?? 'Vind een geheim';
     case 'prijs':

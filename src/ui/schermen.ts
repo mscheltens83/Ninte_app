@@ -142,7 +142,7 @@ export function uitlegScherm(opSluit: () => void, computer: boolean) {
         <div><b class="icoon">🕹️</b>${lopen}</div>
         <div><b class="icoon">⤴️</b>${springen}</div>
         <div><b class="icoon">👀</b>${kijken}</div>
-        <div><b class="icoon">🚪</b>Volg de bordjes naar de Deuren-obby (spelling) of de Reken-obby (rekenen). Loop door de deur met het goede antwoord!</div>
+        <div><b class="icoon">🚪</b>Volg de bordjes naar de Deurenbaan (spelling) of de Rekenbaan (rekenen). Loop door de deur met het goede antwoord!</div>
         <div><b class="icoon">👕</b>In de kledingkast maak je je poppetje mooi. Speel nieuwe kleding vrij of koop het met hoefijzers.</div>
         <div><b class="icoon">🔊</b>Tik op het luidsprekertje om de zin te laten voorlezen.</div>
         <div><b class="icoon">❤️</b>Tik op je pony of puppy om ze te aaien.</div>
@@ -194,7 +194,7 @@ export function finishKaart(
       : `${goedInEenKeer} van de ${totaal} deuren in één keer goed.`;
   const s = toon(
     `<div class="kaart">
-      <h2>Obby gehaald!</h2>
+      <h2>Deurenbaan gehaald!</h2>
       <p class="sterren">${'⭐'.repeat(sterren)}${'<span style="opacity:.25">⭐</span>'.repeat(3 - sterren)}</p>
       <p>${tekst}</p>
       <p><b>+${verdiend} hoefijzers</b></p>
@@ -508,7 +508,7 @@ export function kastScherm(o: KastOpties) {
       } else if (status === 'kopen') {
         const prijs = item.voorwaarde.soort === 'prijs' ? item.voorwaarde.hoefijzers : 0;
         if (o.stand.hoefijzers < prijs) {
-          hint = `Je hebt nog ${prijs - o.stand.hoefijzers} hoefijzers nodig. Verdien ze in de obby's!`;
+          hint = `Je hebt nog ${prijs - o.stand.hoefijzers} hoefijzers nodig. Verdien ze op de deurenbanen!`;
           teKopen = null;
         } else if (teKopen !== item.id) {
           teKopen = item.id; // eerst vragen, dan pas kopen

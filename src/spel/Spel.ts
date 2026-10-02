@@ -839,7 +839,7 @@ export class Spel {
       this.hud.toonBanner('Je hebt nog geen rijdier. Ga door de regenboogpoort naar het Rijland en tem een wild dier!', null, { duur: 5000 });
       return;
     }
-    if (this.huidigeObby()) { this.hud.meld('In de obby loop je zelf'); return; }
+    if (this.huidigeObby()) { this.hud.meld('Op de deurenbaan loop je zelf'); return; }
     this.stapOp(nr);
   }
 
@@ -875,7 +875,7 @@ export class Spel {
     const rijdt = !!this.rijModel;
     if (rijdt && (this.zweeft || this.huidigeObby())) {
       this.stapAf(true);
-      if (this.huidigeObby()) this.hud.meld('In de obby loop je zelf');
+      if (this.huidigeObby()) this.hud.meld('Op de deurenbaan loop je zelf');
     }
     this.boostTijd = Math.max(0, this.boostTijd - dt);
     // De knop "Rijd op je pony" staat bij de pony, zolang je niet rijdt.
@@ -1683,8 +1683,8 @@ export class Spel {
             o.uitgelegd = true;
             const reken = o.obby.thema.id === 'rekenen';
             const tekst = reken
-              ? 'Reken-obby! Loop steeds door de deur met het goede antwoord.'
-              : 'Deuren-obby! Loop steeds door de deur met de goede spelling.';
+              ? 'Rekenbaan! Loop steeds door de deur met het goede antwoord.'
+              : 'Deurenbaan! Loop steeds door de deur met de goede spelling.';
             this.hud.toonBanner(tekst, () => spreek(tekst, 'kies-deur'), { duur: 6000 });
             spreek(tekst, 'kies-deur');
           }
@@ -1766,7 +1766,7 @@ export class Spel {
           window.setTimeout(() => {
             if (this.stand.dag.klaar || this.modus !== 'spelen') return;
             this.pauzeer();
-            spreek('Obby gehaald! Goed gedaan!', 'obby-gehaald');
+            spreek('Deurenbaan gehaald! Goed gedaan!', 'obby-gehaald');
             finishKaart(
               goedInEenKeer,
               AANTAL_POORTEN,

@@ -238,9 +238,9 @@ export function bouwEiland(scene: THREE.Scene, f: Fysica): Eiland {
   // Borden
   // Op de achterkant staat het geheime wachtwoord voor de schatkist.
   bordOpPalen(groep, f, 'Welkom in\nNintes Wereld!', 0, 3, 0, 5, 2, `Psst... het geheime\nwachtwoord is:\n${WACHTWOORD}`);
-  bordOpPalen(groep, f, "Obby's  →", 5.5, 4.5, 0, 4.2, 1.1);
+  bordOpPalen(groep, f, 'Deurenbanen  →', 5.5, 4.5, 0, 4.2, 1.1);
   // Wegwijzer op de splitsing (kijkt naar wie van het startpunt komt)
-  bordOpPalen(groep, f, '↑  Deuren-obby\n←  Reken-obby', 16.5, 11, -Math.PI / 2, 4.4, 1.8);
+  bordOpPalen(groep, f, '↑  Deurenbaan\n←  Rekenbaan', 16.5, 11, -Math.PI / 2, 4.4, 1.8);
   bordOpPalen(groep, f, '←  Stal', -5, 4.5, 0, 3, 1.1);
 
   const stalBord = stal(groep, f);
