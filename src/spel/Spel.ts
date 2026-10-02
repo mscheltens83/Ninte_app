@@ -43,7 +43,7 @@ import { BouwWereld, INGANG, KAVEL_MIDDEN } from '../bouwen/wereld';
 import { BouwModus } from '../bouwen/bouwModus';
 import { BOUW_OPDRACHTEN } from '../bouwen/opdrachten';
 import { opKavel } from '../bouwen/onderdelen';
-import { AANKOMST, PORTAAL_DORP, RANCH, Rijland, inRijland } from '../rijden/rijland';
+import { AANKOMST, PORTAAL_DORP, RANCH, Rijland, inRijland, rijlandHeuvels } from '../rijden/rijland';
 import { EI_PLEKKEN, EiWereld } from '../rijden/eieren';
 import { MEDAILLES, Race, medailleVoor } from '../rijden/race';
 import { RijModel } from '../rijden/model';
@@ -65,6 +65,8 @@ const OBBY_OORSPRONG = new THREE.Vector3(29, 0, 7.5);
 const REKEN_OORSPRONG = new THREE.Vector3(29, 0, -18);
 const OBBY_RICHTING = Math.PI / 2; // de obby loopt richting +x
 const AANTAL_GOUDEN = 5;
+/** Een beetje mist in de verte: geen kale horizon, en elk gebied voelt als een eigen plek. */
+const MIST = { vasteland: [85, 320], rijland: [55, 230] } as const;
 /** Zoveel minuten extra speeltijd geeft "Nog spelen vandaag toestaan". */
 const EXTRA_MINUTEN = 15;
 
@@ -179,7 +181,7 @@ export class Spel {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.scene.background = new THREE.Color('#9ed8ff');
-    this.scene.fog = new THREE.Fog('#9ed8ff', 100, 390);
+    this.scene.fog = new THREE.Fog('#9ed8ff', MIST.vasteland[0], MIST.vasteland[1]);
     this.scene.add(new THREE.HemisphereLight('#dff3ff', '#7cc35a', 1.6));
     this.zon = new THREE.DirectionalLight('#fff3dd', 2.4);
     this.zon.castShadow = true;
@@ -198,10 +200,12 @@ export class Spel {
     this.eiland = bouwEiland(this.scene, this.fysica);
     this.feest = new Feestwereld(this.scene, this.fysica, { zuinig: stand.beeldkwaliteit === 'zuinig' });
     this.bouwWereld = new BouwWereld(this.scene, this.fysica, stand.bouwen);
-    this.rijland = new Rijland(this.scene, this.fysica);
+    // Heuvels en bergen in het Rijland, om de eieren heen.
+    const heuvels = rijlandHeuvels(EI_PLEKKEN.map((e) => ({ x: e.x, z: e.z, r: 3 })));
+    this.rijland = new Rijland(this.scene, this.fysica, heuvels);
     this.eiWereld = new EiWereld(this.scene, stand.rijden.eiPlekken);
-    this.aankleding = new Aankleding(this.scene, this.fysica, EI_PLEKKEN);
-    this.wilde = new WildeDieren(this.scene);
+    this.aankleding = new Aankleding(this.scene, this.fysica, EI_PLEKKEN, heuvels);
+    this.wilde = new WildeDieren(this.scene, heuvels);
     const poort = new THREE.Group();
     this.scene.add(poort);
     this.rijland.regenboogPoort(poort, PORTAAL_DORP.x, PORTAAL_DORP.z, Math.PI / 2);
@@ -713,6 +717,10 @@ export class Spel {
     if (this.modus === 'spelen' || this.modus === 'scherm' || this.modus === 'bouwen') this.ritme.speel(this.muziekPlek());
     this.bouwWereld.update(this.speler.pos);
     this.bouwTip();
+    const mist = this.scene.fog as THREE.Fog;
+    const [dichtbij, ver] = inRijland(this.speler.pos.x, this.speler.pos.z, 40) ? MIST.rijland : MIST.vasteland;
+    mist.near += (dichtbij - mist.near) * Math.min(1, dt * 2);
+    mist.far += (ver - mist.far) * Math.min(1, dt * 2);
     this.rijland.update(dt, this.rijModel ? this.rijSnelheid : 1);
     if (inRijland(this.speler.pos.x, this.speler.pos.z, 60)) {
       this.wilde.update(dt, this.speler.pos);

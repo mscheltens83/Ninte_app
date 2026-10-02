@@ -8,22 +8,15 @@
 import * as THREE from 'three';
 import { botserUitBlok, type Fysica } from '../spel/fysica';
 import { blok, blokOp, dynamisch, voegStatischSamen, zaadRng } from '../wereld/bouwstenen';
-import { BAAN, BIOMEN, KLIMTORENS, MIDDEN, RANCH, RIJLAND, SNELSTROKEN, SPRINGKUSSENS, type Biome } from './rijland';
+import { BAAN, BIOMEN, HERKENNINGSPUNTEN, KLIMTORENS, MIDDEN, RANCH, RIJLAND, SNELSTROKEN, SPRINGKUSSENS, biomeBij, type Biome } from './rijland';
+import { heuvelLagen, opHeuvel, type Heuvel } from '../wereld/heuvels';
 
 const W = RIJLAND.x, Z = RIJLAND.z;
 
 /** Plekken die vrij moeten blijven (eieren, poorten, landmarks), met een straal. */
 interface Vrij { x: number; z: number; r: number }
 
-const HERKENNINGSPUNTEN: Vrij[] = [
-  { x: W - 75, z: Z - 112, r: 9 }, // windmolen
-  { x: W - 105, z: Z - 78, r: 11 }, // vijver
-  { x: W + 60, z: Z - 112, r: 10 }, // oase
-  { x: W + 45, z: Z + 110, r: 12 }, // ijsmeer
-  { x: W + 112, z: Z + 45, r: 7 }, // iglo
-  { x: W - 94, z: Z + 106, r: 4 }, // chocoladerivier (midden)
-  { x: W - 50, z: Z + 110, r: 7 }, // reuzendonut
-];
+// De herkenningspunten staan in rijland.ts (HERKENNINGSPUNTEN), zodat heuvels er ook omheen gaan.
 
 export class Aankleding {
   /** Vaste dingen (worden samengevoegd tot weinig tekenopdrachten). */
@@ -36,7 +29,7 @@ export class Aankleding {
   private eendjes: THREE.Group[] = [];
   private tijd = 0;
 
-  constructor(scene: THREE.Scene, private f: Fysica, vrijeEieren: { x: number; z: number }[] = []) {
+  constructor(scene: THREE.Scene, private f: Fysica, vrijeEieren: { x: number; z: number }[] = [], private heuvels: readonly Heuvel[] = []) {
     scene.add(this.g, this.dyn);
     const vrij: Vrij[] = [
       ...HERKENNINGSPUNTEN,
@@ -50,6 +43,7 @@ export class Aankleding {
     this.bouwHerkenningspunten();
     this.bouwMidden();
     this.bouwLucht();
+    this.bouwHeuveltoppen();
     voegStatischSamen(this.g);
   }
 
@@ -64,6 +58,7 @@ export class Aankleding {
     if (Math.abs(x - W) < MIDDEN + 5 && Math.abs(z - Z) < MIDDEN + 5) return null;
     if (Math.abs(x - W) < 3.5 || Math.abs(z - Z) < 3.5) return null; // heggen
     if (vrij.some((v) => Math.hypot(v.x - x, v.z - z) < v.r)) return null;
+    if (opHeuvel(this.heuvels, x, z, 1.5)) return null;
     // Het pad van de poort naar binnen blijft vrij.
     const poortX = W + b.sx * 30;
     if (Math.abs(x - poortX) < 5 && Math.abs(z - Z) < MIDDEN + 25) return null;
@@ -141,6 +136,30 @@ export class Aankleding {
       mesh.count = n;
       mesh.computeBoundingSphere();
       this.dyn.add(mesh);
+    }
+  }
+
+  /** Bovenop elke heuvel waar je op kunt lopen staat iets leuks. */
+  private bouwHeuveltoppen() {
+    const rng = zaadRng(99);
+    for (const h of this.heuvels) {
+      if (h.steil) continue;
+      const lagen = heuvelLagen(h);
+      const top = lagen[lagen.length - 1];
+      const y = top.top;
+      const b = biomeBij(top.x, top.z);
+      const [x, z] = [top.x, top.z];
+      const g = this.g;
+      switch (b?.id) {
+        case 'zand': g.add(blokOp(0.7, 2.6, 0.7, '#4f9e4a', x, y, z), blokOp(1.6, 0.5, 0.5, '#4f9e4a', x, y + 1.2, z), blokOp(0.3, 0.3, 0.3, '#ff5fa2', x, y + 2.6, z)); break;
+        case 'sneeuw': g.add(blokOp(0.6, 1.4, 0.6, '#85613b', x, y, z), blokOp(3, 1.3, 3, '#2f7d4a', x, y + 1.3, z), blokOp(2.1, 1.2, 2.1, '#3a9257', x, y + 2.5, z), blokOp(1.2, 1, 1.2, '#ffffff', x, y + 3.6, z)); break;
+        case 'snoep': {
+          const kleur = ['#ff5fa2', '#4fb8ff', '#ffd23f'][Math.floor(rng() * 3)];
+          g.add(blokOp(0.3, 3, 0.3, '#ffffff', x, y, z), blokOp(2.2, 2.2, 0.45, kleur, x, y + 3, z), blokOp(1.2, 1.2, 0.5, '#ffffff', x, y + 3.5, z));
+          break;
+        }
+        default: g.add(blokOp(0.6, 2.4, 0.6, '#85613b', x, y, z), blokOp(2.8, 2.2, 2.8, '#4fb35a', x, y + 2.2, z), blokOp(0.35, 0.35, 0.1, '#ff4f6d', x + 0.6, y + 3.2, z + 1.42));
+      }
     }
   }
 

@@ -12,6 +12,7 @@ import { blok, blokOp, dynamisch, tekstBord, voegStatischSamen, zaadRng } from '
 import type { Interactie } from '../avontuur/wereld';
 import { RIJDIEREN } from './dieren';
 import { RijModel } from './model';
+import { bouwHeuvels, hoogteOp, opHeuvel, voetafdruk, type Heuvel, type Laag } from '../wereld/heuvels';
 
 export const RIJLAND = { x: 600, z: 0, half: 130 } as const;
 /** Halve breedte van het middengebied (boom, ranch en racebaan). */
@@ -116,10 +117,16 @@ export class Rijland {
   private weiSleutel = '';
   private tijd = 0;
 
-  constructor(scene: THREE.Scene, private f: Fysica) {
+  /** De heuvels en bergen van het Rijland (zie rijlandHeuvels). */
+  readonly heuvels: readonly Heuvel[];
+  private lagen: Laag[] = [];
+
+  constructor(scene: THREE.Scene, private f: Fysica, heuvels: readonly Heuvel[] = []) {
     scene.add(this.groep);
+    this.heuvels = heuvels;
     const vast = new THREE.Group();
     this.bouwGrond(vast);
+    this.lagen = bouwHeuvels(vast, f, heuvels);
     this.bouwMuren(vast);
     this.bouwBoom(vast);
     this.bouwRanch(vast);
@@ -278,6 +285,7 @@ export class Rijland {
       if (KLIMTORENS.some((t) => Math.abs(x - t.x) < t.basis / 2 + 3 && Math.abs(z - t.z) < t.basis / 2 + 3)) return null;
       if ([...SPRINGKUSSENS, ...SNELSTROKEN].some((p) => Math.hypot(p.x - x, p.z - z) < 5)) return null;
       if (Math.abs(x - W) < 3 || Math.abs(z - Z) < 3) return null;
+      if (opHeuvel(this.heuvels, x, z, 2)) return null;
       return [x, z];
     };
     for (const b of BIOMEN) {
@@ -335,6 +343,11 @@ export class Rijland {
     this.vast(g, 0.35, 4, 0.35, '#ffffff', x, 0, z);
     const kleur = ['#ff5fa2', '#4fb8ff', '#ffd23f', '#a36bff'][Math.floor(rng() * 4)];
     g.add(blokOp(2.6, 2.6, 0.5, kleur, x, 4, z), blokOp(1.6, 1.6, 0.55, '#ffffff', x, 4.5, z), blokOp(0.8, 0.8, 0.6, kleur, x, 4.9, z));
+  }
+
+  /** Hoogte van de heuvels op dit punt. */
+  hoogte(x: number, z: number): number {
+    return hoogteOp(this.lagen, x, z);
   }
 
   /** De barrière van een poort staat open als je dier snel genoeg is. */
@@ -404,4 +417,76 @@ export class Rijland {
       d.model.update(dt, 0.35, false);
     }
   }
+}
+
+/** Herkenningspunten per gebied (windmolen, vijver, oase, ijsmeer, iglo, chocoladerivier, donut). */
+export const HERKENNINGSPUNTEN: { x: number; z: number; r: number }[] = [
+  { x: W - 75, z: Z - 112, r: 9 },
+  { x: W - 105, z: Z - 78, r: 11 },
+  { x: W + 60, z: Z - 112, r: 10 },
+  { x: W + 45, z: Z + 110, r: 12 },
+  { x: W + 112, z: Z + 45, r: 7 },
+  { x: W - 94, z: Z + 106, r: 4 },
+  { x: W - 50, z: Z + 110, r: 7 },
+];
+
+const HEUVEL_KLEUREN: Record<BiomeId, { heuvel: string[]; berg: string[]; top?: string; laag: [number, number]; hoog: [number, number] }> = {
+  weide: { heuvel: ['#7cd35f', '#93e070'], berg: ['#7d9a6a', '#8fae7a'], top: '#ffffff', laag: [3, 6], hoog: [16, 24] },
+  zand: { heuvel: ['#e8c27a', '#f0d08e'], berg: ['#d9773f', '#c4632f'], laag: [2, 3.5], hoog: [14, 20] },
+  sneeuw: { heuvel: ['#ffffff', '#e6f4ff'], berg: ['#cfe3ee', '#b9d6e6'], top: '#ffffff', laag: [4, 8], hoog: [18, 26] },
+  snoep: { heuvel: ['#ff8fbf', '#ffffff', '#c68b59'], berg: ['#ff5fa2', '#ffffff', '#a36bff'], top: '#ffe680', laag: [3, 6], hoog: [14, 22] },
+};
+
+/**
+ * De heuvels en randbergen van het Rijland. Ze blijven weg van `vrij` (bijvoorbeeld eieren),
+ * van klimtorens, herkenningspunten, springkussens, snelstroken, poortpaden en muren.
+ */
+export function rijlandHeuvels(vrij: { x: number; z: number; r: number }[] = []): Heuvel[] {
+  const gereserveerd = [
+    ...vrij,
+    ...HERKENNINGSPUNTEN,
+    ...KLIMTORENS.map((t) => ({ x: t.x, z: t.z, r: t.basis * 0.72 + 3 })),
+    ...SPRINGKUSSENS.map((k) => ({ x: k.x, z: k.z, r: 4 })),
+    ...SNELSTROKEN.map((s) => ({ x: s.x, z: s.z, r: 5 })),
+  ];
+  const heuvels: Heuvel[] = [];
+  const past = (x: number, z: number, voet: number, heuvelsOok: boolean) => {
+    if (gereserveerd.some((v) => Math.hypot(v.x - x, v.z - z) < v.r + voet + 1)) return false;
+    // Niet over de heggen tussen de gebieden of in het midden.
+    if (Math.abs(x - W) < voet + 3 || Math.abs(z - Z) < voet + 3) return false;
+    if (Math.abs(x - W) < MIDDEN + voet + 4 && Math.abs(z - Z) < MIDDEN + voet + 4) return false;
+    // Het pad van de poort het gebied in blijft vrij.
+    for (const b of BIOMEN) {
+      const p = poortVan(b);
+      if (Math.abs(x - p.x) < voet + 4 && Math.sign(z - Z) === b.sz && Math.abs(z - Z) < MIDDEN + 30 + voet) return false;
+    }
+    return !heuvelsOok || heuvels.every((h) => Math.hypot(h.x - x, h.z - z) > voetafdruk(h) + voet - 2);
+  };
+  const rng = zaadRng(1312);
+  for (const b of BIOMEN) {
+    const k = HEUVEL_KLEUREN[b.id];
+    // Randbergen langs de buitenkant: de horizon is dicht en het water blijft buiten.
+    for (const rand of ['x', 'z'] as const) {
+      for (let langs = 14; langs <= RIJLAND.half; langs += 21) {
+        const x = rand === 'x' ? W + b.sx * 125 : W + b.sx * (langs + (rng() - 0.5) * 6);
+        const z = rand === 'z' ? Z + b.sz * 125 : Z + b.sz * (langs + (rng() - 0.5) * 6);
+        for (let straal = 12 + rng() * 4; straal >= 7; straal -= 1.5) {
+          if (!past(x, z, straal * 1.3, false)) continue;
+          heuvels.push({ x, z, straal, hoogte: k.hoog[0] + rng() * (k.hoog[1] - k.hoog[0]), kleuren: k.berg, top: k.top, steil: true });
+          break;
+        }
+      }
+    }
+    // Heuvels in het gebied zelf, waar je op kunt lopen.
+    let geplaatst = 0;
+    for (let poging = 0; poging < 400 && geplaatst < 6; poging++) {
+      const straal = (b.id === 'zand' ? 9 + rng() * 6 : 6 + rng() * 6) * (poging > 200 ? 0.7 : 1);
+      const voet = straal * 1.3;
+      const x = W + b.sx * (6 + rng() * (110 - voet)), z = Z + b.sz * (6 + rng() * (110 - voet));
+      if (!past(x, z, voet, true)) continue;
+      heuvels.push({ x, z, straal, hoogte: k.laag[0] + rng() * (k.laag[1] - k.laag[0]), kleuren: k.heuvel });
+      geplaatst++;
+    }
+  }
+  return heuvels;
 }

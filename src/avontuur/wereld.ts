@@ -3,7 +3,8 @@ import { botserUitBlok, type Botser, type Fysica, type Vec3 } from '../spel/fysi
 import { blok, blokOp, tekstBord, voegStatischSamen, type Tekstbord } from '../wereld/bouwstenen';
 import { BOS_BEWONERS, DECORATIES, GEBIEDEN, MATERIAALPLEKKEN, MISSIES, TOREN, VLIEG_ONDERDELEN, WERELD, type Gebied, type RobotRoute } from './inhoud';
 import { brugMaten, heeftVleugel, type AvontuurStand, type RobotStand } from './logica';
-import { TERRASSEN, HEUVEL_TRAPPEN, terreinHoogte, torenTrappen, bewonerPos } from './landschap';
+import { TERRASSEN, HEUVEL_TRAPPEN, VASTELAND_HEUVELS, terreinHoogte, torenTrappen, bewonerPos } from './landschap';
+import { bouwHeuvels } from '../wereld/heuvels';
 
 /** Iets in de wereld waar je bij kunt drukken op E of de knop. Met `doe` kan elk onderdeel van het spel zijn eigen actie toevoegen. */
 export interface Interactie { id: string; naam: string; x: number; y?:number; z: number; soort: 'gebied' | 'materiaal' | 'bewoner' | 'vlag' | 'onderdeel' | 'vleugel' | 'actie'; gebied?: Gebied; doe?: () => void; /** Hoe dichtbij je moet zijn (standaard 3,8 meter). */ straal?: number }
@@ -46,6 +47,7 @@ export class AvontuurWereld {
     // Dit vasteland sluit zonder sprong aan op het oorspronkelijke strand.
     this.vast(this.groep, WERELD.halfBreedte*2, 3, WERELD.zuid-WERELD.noord, '#75b864', 0, -3, (WERELD.zuid+WERELD.noord)/2);
     for(const t of TERRASSEN)this.vast(this.groep,t.b,t.h,t.d,'#7db867',t.x,0,t.z);
+    bouwHeuvels(this.groep,this.f,VASTELAND_HEUVELS);
     for(const t of HEUVEL_TRAPPEN)this.vast(this.groep,t.b,t.h,t.d,'#c5a779',t.x,0,t.z);
     this.pad(0,-36,0,-230,'#e6cfaa');
     for(const g of GEBIEDEN.filter(g=>!['dorp','boomhut','brug','tuin'].includes(g.id))){const n=Math.round(g.y/.4);this.pad(0,g.z+18+n*.95+3,g.x,g.z+18+n*.95+3,g.kleur);this.pad(g.x,g.z+18+n*.95+3,g.x,g.z+19+n*.95,g.kleur);}
