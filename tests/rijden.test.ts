@@ -285,3 +285,76 @@ describe('broedhuis en dierenboek', () => {
     expect(dierLabel({ nr: 0, soort: PONY_ID, variant: 'normaal' }, 'Bliksem').naam).toBe('Bliksem');
   });
 });
+
+import { WILDE_DIEREN, WildeDieren, TERUG_NA } from '../src/rijden/wild';
+import { Aankleding } from '../src/rijden/aankleding';
+import { temScherm } from '../src/rijden/schermen';
+
+describe('wilde dieren en een vollere wereld', () => {
+  it('laat wilde dieren rondlopen in hun eigen gebied, zonder door muren te gaan', () => {
+    const w = new WildeDieren(new THREE.Scene());
+    expect(w.dieren.length).toBe(WILDE_DIEREN.reduce((s, d) => s + d.aantal, 0));
+    w.dieren.forEach((d, i) => {
+      const gebied = WILDE_DIEREN.flatMap((x) => Array(x.aantal).fill(x.gebied))[i];
+      for (let a = 0; a < 8; a++) {
+        const x = d.anker.x + Math.cos((a / 8) * Math.PI * 2) * d.straal, z = d.anker.z + Math.sin((a / 8) * Math.PI * 2) * d.straal;
+        if (gebied === 'midden') {
+          expect(biomeBij(x, z)).toBeNull();
+          expect(Math.hypot(x - RIJLAND.x, z - RIJLAND.z)).toBeGreaterThan(6);
+        } else {
+          expect(biomeBij(x, z)?.id, `${d.soort} ${i}`).toBe(gebied);
+          expect(Math.abs(x - RIJLAND.x)).toBeGreaterThan(4);
+          expect(Math.abs(z - RIJLAND.z)).toBeGreaterThan(4);
+        }
+      }
+    });
+  });
+  it('blijft staan als je ernaast staat, en komt na het temmen later terug', () => {
+    const w = new WildeDieren(new THREE.Scene());
+    const d = w.dieren[0];
+    const p = d.model.groep.position.clone();
+    w.update(1, { x: p.x + 1, y: 0, z: p.z });
+    expect(d.model.groep.position.distanceTo(p)).toBeLessThan(0.01);
+    w.update(1, { x: p.x + 60, y: 0, z: p.z });
+    expect(d.model.groep.position.distanceTo(p)).toBeGreaterThan(0.01);
+    w.getemd(0);
+    expect(d.model.groep.visible).toBe(false);
+    expect(d.interactie.y).toBe(-999);
+    w.update(TERUG_NA - 1, { x: p.x + 60, y: 0, z: p.z });
+    expect(d.model.groep.visible).toBe(false);
+    w.update(2, { x: p.x + 60, y: 0, z: p.z });
+    expect(d.model.groep.visible).toBe(true);
+    expect(d.interactie.y).toBe(0);
+    expect(w.interacties[0].naam).toContain('Tem de');
+  });
+  it('kleedt het Rijland aan met veel meer dingen, zonder eieren te blokkeren', () => {
+    const scene = new THREE.Scene();
+    const f = new Fysica();
+    const voor = scene.children.length;
+    const a = new Aankleding(scene, f, EI_PLEKKEN);
+    expect(scene.children.length).toBe(voor + 2);
+    let meshes = 0, tapijt = 0;
+    scene.traverse((o) => { if (o instanceof THREE.InstancedMesh) tapijt += o.count; else if (o instanceof THREE.Mesh) meshes++; });
+    expect(tapijt).toBeGreaterThan(2000);
+    expect(meshes).toBeGreaterThan(20);
+    expect(f.botsers.length).toBeGreaterThan(100);
+    // Geen botsblok op een eierplek in het Rijland.
+    for (const p of EI_PLEKKEN.filter((e) => inRijland(e.x, e.z) && e.y === 0)) {
+      expect(f.botsers.some((b) => p.x > b.min.x - 0.4 && p.x < b.max.x + 0.4 && p.z > b.min.z - 0.4 && p.z < b.max.z + 0.4 && b.max.y > 0.6), p.id).toBe(false);
+    }
+    expect(() => a.update(0.5)).not.toThrow();
+  });
+  it('tem je met een goed antwoord, met een tip bij een fout', () => {
+    const vraag: Vraag = { soort: 'rekenen', sleutel: '6x7', tekst: '6 × 7 = ___', goed: '42', fout: '48', voorlezen: '6 keer 7', tip: 'Eerst 5 × 7 = 35, dan nog 7 erbij.', tipTitel: 'Het goede antwoord is:' };
+    const antwoorden: [boolean, boolean][] = [];
+    const getemd = vi.fn();
+    temScherm({ soort: 'zebra', variant: 'normaal', vraag, opAntwoord: (g, e) => antwoorden.push([g, e]), opGetemd: getemd, spreek: vi.fn(), geluid: { klik: vi.fn(), goed: vi.fn(), fout: vi.fn() }, opSluit: vi.fn() });
+    expect(document.body.textContent).toContain('zebra');
+    document.querySelector<HTMLButtonElement>('[data-keuze="48"]')!.click();
+    expect(getemd).not.toHaveBeenCalled();
+    expect(document.querySelector('.tip')!.textContent).toContain('35');
+    document.querySelector<HTMLButtonElement>('[data-keuze="42"]')!.click();
+    expect(getemd).toHaveBeenCalledOnce();
+    expect(antwoorden).toEqual([[false, true], [true, false]]);
+  });
+});

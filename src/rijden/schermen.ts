@@ -174,3 +174,52 @@ export function dierenboekScherm(o: BoekOpties): HTMLDivElement {
   s.querySelector<HTMLButtonElement>('[data-sluit]')!.onclick = () => o.opSluit();
   return s;
 }
+
+export interface TemOpties {
+  soort: string;
+  variant: string;
+  vraag: Vraag;
+  opAntwoord(goed: boolean, eersteKeer: boolean): void;
+  opGetemd(): void;
+  spreek(tekst: string): void;
+  geluid: { klik(): void; goed(): void; fout(): void };
+  opSluit(): void;
+}
+
+/** Een wild dier temmen: beantwoord de vraag goed, dan wordt het jouw rijdier. */
+export function temScherm(o: TemOpties): HTMLDivElement {
+  const r = rijdier(o.soort)!;
+  const l = dierLabel({ nr: 1, soort: o.soort, variant: o.variant as never }, '');
+  const v = o.vraag;
+  const keuzes = Math.random() < 0.5 ? [v.goed, v.fout] : [v.fout, v.goed];
+  let eerste = true;
+  const s = toon(`<div class="kaart rij-kaart">
+    <div class="onthulling klein-onthul" style="--zeld:${l.kleur}"><span class="dier-icoon">${l.icoon}</span></div>
+    <h2>Een wilde ${veilig(l.naam.toLowerCase())}!</h2>
+    <p>Beantwoord de vraag goed, dan wordt de ${veilig(r.naam.toLowerCase())} jouw rijdier. ⚡ ${komma(snelheidVan(o.soort, o.variant))}</p>
+    <p class="broed-vraag">${veilig(v.tekst).replace('___', '<span class="gat"></span>')}</p>
+    <div class="broed-keuzes">${keuzes.map((k) => `<button class="knop" data-keuze="${veilig(k)}">${veilig(k)}</button>`).join('')}</div>
+    <button class="tempo-knop" data-lees>🔊 Lees voor</button>
+    <p class="tip" hidden></p>
+    <button class="knop wit" data-sluit>Laat maar lopen</button>
+  </div>`, 'rij-scherm');
+  const tip = s.querySelector<HTMLElement>('.tip')!;
+  s.querySelector<HTMLButtonElement>('[data-lees]')!.onclick = () => o.spreek(v.voorlezen);
+  o.spreek(v.voorlezen);
+  s.querySelectorAll<HTMLButtonElement>('[data-keuze]').forEach((b) => (b.onclick = () => {
+    const goed = b.dataset.keuze === v.goed;
+    o.opAntwoord(goed, eerste);
+    eerste = false;
+    if (goed) {
+      o.geluid.goed();
+      o.opGetemd();
+    } else {
+      o.geluid.fout();
+      tip.hidden = false;
+      tip.innerHTML = `${veilig(v.tipTitel)} <b>${veilig(v.goed)}</b>. ${veilig(v.tip)} Probeer het nog eens!`;
+      o.spreek(`${v.goed}. ${v.tip}`);
+    }
+  }));
+  s.querySelector<HTMLButtonElement>('[data-sluit]')!.onclick = () => o.opSluit();
+  return s;
+}
