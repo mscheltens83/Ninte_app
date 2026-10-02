@@ -20,6 +20,8 @@ export interface Instrument {
   pan: number;
   /** Hoeveel galm (0..1) */
   galm: number;
+  /** Duikt even weg op elke boem, zoals in moderne pop ("pompen"). */
+  pompt?: boolean;
   speel: Speel;
 }
 
@@ -38,6 +40,23 @@ function houd(g: AudioParam, t: number, piek: number, aanval: number, vast: numb
   g.linearRampToValueAtTime(piek, t + aanval);
   g.setValueAtTime(piek, t + Math.max(aanval, vast));
   g.exponentialRampToValueAtTime(STIL, t + Math.max(aanval, vast) + los);
+}
+
+const krommes = new Map<number, Float32Array<ArrayBuffer>>();
+/** Zachte vervorming: maakt bas en drums voller en ook hoorbaar op kleine speakers. */
+function verzadig(m: Mixer, drive: number): WaveShaperNode {
+  let kromme = krommes.get(drive);
+  if (!kromme) {
+    kromme = new Float32Array(1024);
+    for (let i = 0; i < kromme.length; i++) {
+      const x = (i / (kromme.length - 1)) * 2 - 1;
+      kromme[i] = Math.tanh(x * drive) / Math.tanh(drive);
+    }
+    krommes.set(drive, kromme);
+  }
+  const w = m.ctx.createWaveShaper();
+  w.curve = kromme;
+  return w;
 }
 
 function osc(m: Mixer, type: OscillatorType, freq: number, t: number, stop: number): OscillatorNode {
@@ -78,14 +97,22 @@ function ruisSlag(m: Mixer, uit: AudioNode, t: number, piek: number, verval: num
 
 export const INSTRUMENTEN = {
   boem: {
-    naam: 'Boem (basdrum)', soort: 'slag', pan: 0, galm: 0.05,
+    naam: 'Boem (basdrum)', soort: 'slag', pan: 0, galm: 0.02,
     speel: (m, uit, t, _f, _d, s) => {
-      const o = osc(m, 'sine', 150, t, t + 0.5);
-      o.frequency.exponentialRampToValueAtTime(42, t + 0.13);
+      // Lichaam: een diepe toon die snel omlaag zakt, licht vervormd voor meer kracht.
+      const o = osc(m, 'sine', 190, t, t + 0.6);
+      o.frequency.exponentialRampToValueAtTime(52, t + 0.07);
+      o.frequency.exponentialRampToValueAtTime(44, t + 0.4);
       const g = gain(m);
-      omhul(g.gain, t, 0.95 * s, 0.003, 0.4);
-      o.connect(g).connect(uit);
-      ruisSlag(m, uit, t, 0.12 * s, 0.012, 'highpass', 3000);
+      omhul(g.gain, t, 1.15 * s, 0.002, 0.48);
+      o.connect(verzadig(m, 2.2)).connect(g).connect(uit);
+      // Klik: de tik bovenop, waardoor je de boem ook op een iPad goed hoort.
+      const k = osc(m, 'triangle', 2600, t, t + 0.03);
+      k.frequency.exponentialRampToValueAtTime(600, t + 0.02);
+      const kg = gain(m);
+      omhul(kg.gain, t, 0.35 * s, 0.001, 0.02);
+      k.connect(kg).connect(uit);
+      ruisSlag(m, uit, t, 0.18 * s, 0.01, 'highpass', 4000);
     },
   },
   klap: {
@@ -103,19 +130,23 @@ export const INSTRUMENTEN = {
     },
   },
   trom: {
-    naam: 'Snaredrum', soort: 'slag', pan: 0.05, galm: 0.3,
+    naam: 'Snaredrum', soort: 'slag', pan: 0.05, galm: 0.35,
     speel: (m, uit, t, _f, _d, s) => {
-      ruisSlag(m, uit, t, 0.45 * s, 0.17, 'highpass', 1400);
-      const o = osc(m, 'triangle', 190, t, t + 0.15);
-      o.frequency.exponentialRampToValueAtTime(140, t + 0.1);
-      const g = gain(m);
-      omhul(g.gain, t, 0.35 * s, 0.002, 0.1);
-      o.connect(g).connect(uit);
+      // Een vette popsnare: ruis met een lange staart en twee tonen eronder.
+      ruisSlag(m, uit, t, 0.6 * s, 0.24, 'bandpass', 2400, 0.6);
+      ruisSlag(m, uit, t, 0.3 * s, 0.12, 'highpass', 6000);
+      for (const [f, v] of [[210, 0.45], [340, 0.2]] as const) {
+        const o = osc(m, 'triangle', f, t, t + 0.2);
+        o.frequency.exponentialRampToValueAtTime(f * 0.75, t + 0.12);
+        const g = gain(m);
+        omhul(g.gain, t, v * s, 0.002, 0.14);
+        o.connect(verzadig(m, 1.6)).connect(g).connect(uit);
+      }
     },
   },
   tik: {
-    naam: 'Tsss (dichte hihat)', soort: 'slag', pan: -0.25, galm: 0.1,
-    speel: (m, uit, t, _f, _d, s) => ruisSlag(m, uit, t, 0.2 * s, 0.045, 'highpass', 7500),
+    naam: 'Tsss (dichte hihat)', soort: 'slag', pan: -0.25, galm: 0.08,
+    speel: (m, uit, t, _f, _d, s) => ruisSlag(m, uit, t, 0.22 * s, 0.035, 'highpass', 9000),
   },
   tsss: {
     naam: 'Open hihat', soort: 'slag', pan: -0.3, galm: 0.15,
@@ -146,20 +177,87 @@ export const INSTRUMENTEN = {
     },
   },
   bas: {
-    naam: 'Bas', soort: 'toon', pan: 0, galm: 0.05,
+    naam: 'Bas', soort: 'toon', pan: 0, galm: 0.03, pompt: true,
     speel: (m, uit, t, f, d, s) => {
+      // Een zware popbas: een diepe sinus plus een gefilterde zaagtand, licht vervormd.
       const lengte = Math.min(Math.max(d, 0.12), 1.5);
-      const o = osc(m, 'sawtooth', f, t, t + lengte + 0.1);
-      const lp = filter(m, 'lowpass', 1400, 4);
-      lp.frequency.setValueAtTime(1400, t);
-      lp.frequency.exponentialRampToValueAtTime(260, t + 0.18);
       const g = gain(m);
-      houd(g.gain, t, 0.42 * s, 0.006, lengte * 0.8, 0.08);
-      o.connect(lp).connect(g).connect(uit);
+      houd(g.gain, t, 0.5 * s, 0.005, lengte * 0.85, 0.07);
+      const sub = osc(m, 'sine', f, t, t + lengte + 0.1);
+      const zaag = osc(m, 'sawtooth', f, t, t + lengte + 0.1);
+      const lp = filter(m, 'lowpass', 1800, 3);
+      lp.frequency.setValueAtTime(1800, t);
+      lp.frequency.exponentialRampToValueAtTime(320, t + 0.16);
+      const zg = gain(m);
+      zg.gain.value = 0.55;
+      zaag.connect(lp).connect(zg).connect(g);
+      sub.connect(g);
+      g.connect(verzadig(m, 1.8)).connect(uit);
+    },
+  },
+  subbas: {
+    naam: '808-bas', soort: 'toon', pan: 0, galm: 0.02, pompt: true,
+    speel: (m, uit, t, f, d, s) => {
+      // De beroemde 808: een lange, glijdende diepe toon, vervormd zodat je hem ook op kleine speakers hoort.
+      const lengte = Math.min(Math.max(d, 0.2), 1.6);
+      const o = osc(m, 'sine', f * 1.6, t, t + lengte + 0.2);
+      o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+      const g = gain(m);
+      houd(g.gain, t, 0.75 * s, 0.004, lengte * 0.8, 0.15);
+      o.connect(verzadig(m, 3)).connect(g).connect(uit);
+    },
+  },
+  supersaw: {
+    naam: 'Supersaw-akkoord', soort: 'akkoord', pan: 0, galm: 0.45, pompt: true,
+    speel: (m, uit, t, f, d, s) => {
+      // Vijf licht ontstemde zaagtanden: het brede, glanzende popakkoord.
+      const lengte = Math.max(d, 0.2);
+      const g = gain(m);
+      houd(g.gain, t, 0.028 * s, 0.015, lengte * 0.92, 0.25);
+      const lp = filter(m, 'lowpass', 3600, 0.6);
+      for (const cent of [-22, -9, 0, 9, 22]) {
+        const o = osc(m, 'sawtooth', f, t, t + lengte + 0.35);
+        o.detune.value = cent;
+        o.connect(lp);
+      }
+      lp.connect(g).connect(uit);
+    },
+  },
+  stab: {
+    naam: 'Akkoordstoot', soort: 'akkoord', pan: 0.15, galm: 0.4, pompt: true,
+    speel: (m, uit, t, f, _d, s) => {
+      const g = gain(m);
+      omhul(g.gain, t, 0.05 * s, 0.003, 0.22);
+      const lp = filter(m, 'lowpass', 4200, 1);
+      lp.frequency.setValueAtTime(4200, t);
+      lp.frequency.exponentialRampToValueAtTime(900, t + 0.2);
+      for (const cent of [-12, 0, 12]) {
+        const o = osc(m, 'sawtooth', f, t, t + 0.3);
+        o.detune.value = cent;
+        o.connect(lp);
+      }
+      lp.connect(g).connect(uit);
+    },
+  },
+  popPluk: {
+    naam: 'Poppluk', soort: 'toon', pan: -0.1, galm: 0.4, pompt: true,
+    speel: (m, uit, t, f, _d, s) => {
+      // Het korte, heldere plingende geluid uit veel zomerhits.
+      const g = gain(m);
+      omhul(g.gain, t, 0.2 * s, 0.002, 0.38);
+      const lp = filter(m, 'lowpass', 5000, 2);
+      lp.frequency.setValueAtTime(5000, t);
+      lp.frequency.exponentialRampToValueAtTime(700, t + 0.25);
+      osc(m, 'sawtooth', f, t, t + 0.45).connect(lp);
+      const vierkant = osc(m, 'square', f * 2, t, t + 0.45);
+      const vg = gain(m);
+      vg.gain.value = 0.3;
+      vierkant.connect(vg).connect(lp);
+      lp.connect(g).connect(uit);
     },
   },
   diepbas: {
-    naam: 'Zachte bas', soort: 'toon', pan: 0, galm: 0.05,
+    naam: 'Zachte bas', soort: 'toon', pan: 0, galm: 0.05, pompt: true,
     speel: (m, uit, t, f, d, s) => {
       const lengte = Math.min(Math.max(d, 0.15), 2);
       const g = gain(m);
@@ -168,7 +266,7 @@ export const INSTRUMENTEN = {
     },
   },
   pad: {
-    naam: 'Zacht tapijt', soort: 'akkoord', pan: 0, galm: 0.55,
+    naam: 'Zacht tapijt', soort: 'akkoord', pan: 0, galm: 0.55, pompt: true,
     speel: (m, uit, t, f, d, s) => {
       const lengte = Math.max(d, 0.4);
       const g = gain(m);
@@ -183,7 +281,7 @@ export const INSTRUMENTEN = {
     },
   },
   orgel: {
-    naam: 'Orgel', soort: 'akkoord', pan: -0.15, galm: 0.3,
+    naam: 'Orgel', soort: 'akkoord', pan: -0.15, galm: 0.3, pompt: true,
     speel: (m, uit, t, f, d, s) => {
       const g = gain(m);
       houd(g.gain, t, 0.05 * s, 0.005, Math.min(d, 0.25), 0.12);
@@ -194,7 +292,7 @@ export const INSTRUMENTEN = {
     },
   },
   pluk: {
-    naam: 'Gitaar', soort: 'toon', pan: -0.35, galm: 0.25,
+    naam: 'Gitaar', soort: 'toon', pan: -0.35, galm: 0.25, pompt: true,
     speel: (m, uit, t, f, _d, s) => {
       const g = gain(m);
       omhul(g.gain, t, 0.24 * s, 0.003, 0.5);
@@ -253,7 +351,7 @@ export const INSTRUMENTEN = {
     },
   },
   lead: {
-    naam: 'Spelcomputer', soort: 'toon', pan: 0.1, galm: 0.3,
+    naam: 'Spelcomputer', soort: 'toon', pan: 0.1, galm: 0.3, pompt: true,
     speel: (m, uit, t, f, d, s) => {
       const lengte = Math.max(d * 0.9, 0.08);
       const g = gain(m);

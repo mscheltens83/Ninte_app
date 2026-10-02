@@ -9,7 +9,9 @@ import {
 } from '../src/bouwen/stand';
 import { hoogsteToren, isRechthoek, omtrek, plattegrond, zelfdeVorm } from '../src/bouwen/analyse';
 import { BOUW_OPDRACHTEN, L_TEKENING, heeftOnderdeel, leesAntwoord, opdrachtKlaar, opdrachtOpen, volgendeOpdracht, opdrachtMetId } from '../src/bouwen/opdrachten';
-import { BouwWereld, INGANG, celMidden, randBij, randMidden, vakjeBij } from '../src/bouwen/wereld';
+import { BAS_PLEK, BouwWereld, INGANG, celMidden, randBij, randMidden, vakjeBij } from '../src/bouwen/wereld';
+import { AvontuurWereld } from '../src/avontuur/wereld';
+import { nieuwAvontuur } from '../src/avontuur/logica';
 import { BouwModus, tekeningSvg } from '../src/bouwen/bouwModus';
 import { MEUBEL_MODELLEN, meubelModel } from '../src/bouwen/modellen';
 import { bloemPlekken } from '../src/ritme/feestwereld';
@@ -293,6 +295,21 @@ describe('de bouwkavel in de wereld', () => {
     const straal = new THREE.Ray(new THREE.Vector3(m.x, 30, m.z), new THREE.Vector3(0, -1, 0));
     expect(w.raakBlok(straal)).toMatchObject({ x: 5, z: 5, y: 2 });
     expect(w.raakBlok(new THREE.Ray(new THREE.Vector3(m.x + 10, 30, m.z), new THREE.Vector3(0, -1, 0)))).toBeNull();
+  });
+  it('start het bouwen als je op de kavel of op Bas tikt, en toont overal op de kavel de knop', () => {
+    const { w } = wereld();
+    const omlaag = (x: number, z: number) => new THREE.Ray(new THREE.Vector3(x, 30, z), new THREE.Vector3(0, -1, 0));
+    const m = celMidden(7, 6);
+    expect(w.raaktKavel(omlaag(m.x, m.z))).toBe(true);
+    expect(w.raaktKavel(omlaag(KAVEL.x0 - 6, KAVEL.z0))).toBe(false);
+    expect(w.raaktKavel(new THREE.Ray(new THREE.Vector3(BAS_PLEK.x + 10, 1.5, BAS_PLEK.z), new THREE.Vector3(-1, 0, 0)))).toBe(true);
+    const kavel = w.interacties.find((i) => i.id === 'kavel')!;
+    const aw = new AvontuurWereld(new THREE.Scene(), new Fysica(), nieuwAvontuur());
+    aw.interacties.push(...w.interacties);
+    const hoek = celMidden(0, 0);
+    expect(aw.dichtst({ x: hoek.x, y: 0, z: hoek.z })?.id).toBe(kavel.id);
+    expect(aw.dichtst({ x: BAS_PLEK.x + 0.8, y: 0, z: BAS_PLEK.z })?.id).toBe('bouwen');
+    expect(aw.dichtst({ x: KAVEL.x0 - 8, y: 0, z: KAVEL.z0 - 8 })).toBeUndefined();
   });
   it('heeft voor elk meubel een model en houdt bloemen weg van de kavel', () => {
     for (const o of ONDERDELEN.filter((x) => x.soort === 'meubel')) {

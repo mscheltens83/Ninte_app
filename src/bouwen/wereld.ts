@@ -7,7 +7,7 @@ import { blok, blokOp, dynamisch, tekstBord, voegStatischSamen } from '../wereld
 import type { Interactie } from '../avontuur/wereld';
 import { plattegrond } from './analyse';
 import { blokModel, meubelModel, muurBotsing, muurModel } from './modellen';
-import { KAVEL, KAVEL_RAND, MUUR_HOOGTE, kleurHex, onderdeel, type Botsing } from './onderdelen';
+import { KAVEL, KAVEL_RAND, MUUR_HOOGTE, kleurHex, onderdeel, opKavel, type Botsing } from './onderdelen';
 import { geldigeRand, meubelMaat, type BouwStand, type Richting } from './stand';
 
 const C = KAVEL.cel;
@@ -106,6 +106,8 @@ export class BouwWereld {
     this.groep.add(bas);
     this.f.voegToe(botserUitBlok(BAS_PLEK.x, 1.1, BAS_PLEK.z, 0.7, 2.2, 0.7));
     this.interacties.push({ id: 'bouwen', naam: '🔨 Bouwen met Bas', x: BAS_PLEK.x, y: 0, z: BAS_PLEK.z, soort: 'actie' });
+    // Ook overal op de kavel zelf verschijnt de bouwknop.
+    this.interacties.push({ id: 'kavel', naam: '🔨 Bouwen', x: KAVEL_MIDDEN.x, y: 0, z: KAVEL_MIDDEN.z, soort: 'actie', straal: 14 });
   }
 
   private maakRaster(): THREE.LineSegments {
@@ -200,6 +202,14 @@ export class BouwWereld {
     this.dak.visible = this.stand.dak && !this.bouwmodus && !binnen;
     this.raster.visible = this.bouwmodus;
     if (!this.bouwmodus) this.cursor.visible = false;
+  }
+
+  /** Tikt deze straal op de kavel of op Bas? */
+  raaktKavel(straal: THREE.Ray): boolean {
+    const p = this.grondPunt(straal);
+    if (p && opKavel(p.x, p.z, 0.5)) return true;
+    const bas = new THREE.Box3(new THREE.Vector3(BAS_PLEK.x - 0.6, 0, BAS_PLEK.z - 0.6), new THREE.Vector3(BAS_PLEK.x + 0.6, 2.4, BAS_PLEK.z + 0.6));
+    return straal.intersectsBox(bas);
   }
 
   /** Waar een straal de grond van de kavel raakt. */

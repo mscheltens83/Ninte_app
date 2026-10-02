@@ -42,6 +42,7 @@ import { puls } from '../ritme/dansen';
 import { BouwWereld, INGANG, KAVEL_MIDDEN } from '../bouwen/wereld';
 import { BouwModus } from '../bouwen/bouwModus';
 import { BOUW_OPDRACHTEN } from '../bouwen/opdrachten';
+import { opKavel } from '../bouwen/onderdelen';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
@@ -108,6 +109,7 @@ export class Spel {
   private feest: Feestwereld;
   private bouwWereld: BouwWereld;
   private bouwModus: BouwModus;
+  private bouwTipGezien = false;
   private meter: Muziekmeter;
   private dierDans: (() => void)[] = [];
   private laatsteTel = 0;
@@ -642,6 +644,7 @@ export class Spel {
     if (this.modus === 'bouwen') this.bouwModus.update(dt);
     if (this.modus === 'spelen' || this.modus === 'scherm' || this.modus === 'bouwen') this.ritme.speel(this.muziekPlek());
     this.bouwWereld.update(this.speler.pos);
+    this.bouwTip();
     this.ritme.update(dt);
     this.updateDieren(dt);
     this.leven.update(dt, this.speler.pos);
@@ -718,6 +721,17 @@ export class Spel {
     this.hud.verbergBanner();
     this.bouwModus.start();
     spreek('Hoi! Ik ben Bas de bouwer. Kies onderin wat je wilt bouwen en tik op het veld.');
+  }
+
+  /** De eerste keer op de kavel: vertel hoe je begint met bouwen. */
+  private bouwTip() {
+    if (this.bouwTipGezien || this.modus !== 'spelen') return;
+    const p = this.speler.pos;
+    if (!opKavel(p.x, p.z, 2)) return;
+    this.bouwTipGezien = true;
+    const tekst = 'Dit is jouw bouwkavel! Tik op de knop Bouwen onderin, of tik op de kavel, om te beginnen.';
+    this.hud.toonBanner(`🔨 ${tekst}`, () => spreek(tekst), { duur: 7000 });
+    spreek(tekst);
   }
 
   private stopBouwen() {
@@ -1149,7 +1163,11 @@ export class Spel {
         geraakt = dier;
       }
     }
-    if (!geraakt) return;
+    if (!geraakt) {
+      // Op de bouwkavel of op Bas getikt? Dan gaan we bouwen.
+      if (this.bouwWereld.raaktKavel(this.straal.ray)) this.startBouwen();
+      return;
+    }
     const kop = geraakt.groep.localToWorld(geraakt.hoofdAnker.clone());
     this.effecten.hartjes(kop.add(new THREE.Vector3(0, 0.4, 0)));
     const truc = geraakt.aai();

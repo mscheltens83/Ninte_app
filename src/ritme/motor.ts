@@ -10,7 +10,7 @@ import { LIEDJES, type Laag, type LaagGroep, type Lied } from './liedjes';
 import { leesPatroon, type Noot, type Patroon } from './patroon';
 import { drieklank, frequentie, inToonsoort, trapNaarMidi } from './theorie';
 
-const VOLUME = 0.34;
+const VOLUME = 0.4;
 const VOLUME_GEDEMPT = 0.09;
 /** Op deze hoogtes klinken goede antwoorden na elkaar: steeds een toontje hoger. */
 const REEKS_TRAPPEN = [0, 2, 4, 7, 9, 11, 14, 16];
@@ -75,6 +75,8 @@ interface Graaf {
   mixer: Mixer;
   hoofd: GainNode;
   bus: GainNode;
+  /** Instrumenten die wegduiken op elke boem lopen via deze knop. */
+  pomp: GainNode;
   galm: GainNode;
   kanalen: Map<string, GainNode>;
 }
@@ -245,19 +247,31 @@ export class Meespeelmuziek {
   private bouwGraaf(ctx: AudioContext): Graaf {
     const hoofd = ctx.createGain();
     hoofd.gain.value = 0.0001;
+    // Eindmix: meer laag en een beetje glans, daarna stevig samengedrukt zoals op de radio.
     const pers = ctx.createDynamicsCompressor();
-    pers.threshold.value = -16;
-    pers.ratio.value = 4;
-    pers.attack.value = 0.01;
-    pers.release.value = 0.2;
+    pers.threshold.value = -20;
+    pers.knee.value = 6;
+    pers.ratio.value = 5;
+    pers.attack.value = 0.005;
+    pers.release.value = 0.15;
+    const laag = ctx.createBiquadFilter();
+    laag.type = 'lowshelf';
+    laag.frequency.value = 110;
+    laag.gain.value = 5;
+    const glans = ctx.createBiquadFilter();
+    glans.type = 'highshelf';
+    glans.frequency.value = 9000;
+    glans.gain.value = 3;
     const bus = ctx.createGain();
-    bus.connect(pers).connect(hoofd).connect(ctx.destination);
+    bus.connect(laag).connect(glans).connect(pers).connect(hoofd).connect(ctx.destination);
+    const pomp = ctx.createGain();
+    pomp.connect(bus);
     const galm = ctx.createGain();
     galm.gain.value = 0.6;
     const zaal = ctx.createConvolver();
     zaal.buffer = maakGalm(ctx);
     galm.connect(zaal).connect(bus);
-    return { ctx, mixer: { ctx, ruis: maakRuis(ctx) }, hoofd, bus, galm, kanalen: new Map() };
+    return { ctx, mixer: { ctx, ruis: maakRuis(ctx) }, hoofd, bus, pomp, galm, kanalen: new Map() };
   }
 
   /** Eén kanaal per instrument: links/rechts en een beetje galm. */
@@ -266,12 +280,13 @@ export class Meespeelmuziek {
     if (!k) {
       const inst = INSTRUMENTEN[id] as Instrument;
       k = g.ctx.createGain();
+      const doel = inst.pompt ? g.pomp : g.bus;
       const naarBus = typeof g.ctx.createStereoPanner === 'function' ? g.ctx.createStereoPanner() : null;
       if (naarBus) {
         naarBus.pan.value = inst.pan;
-        k.connect(naarBus).connect(g.bus);
+        k.connect(naarBus).connect(doel);
       } else {
-        k.connect(g.bus);
+        k.connect(doel);
       }
       const send = g.ctx.createGain();
       send.gain.value = inst.galm;
@@ -319,6 +334,12 @@ export class Meespeelmuziek {
     const sterkte = (laag.volume ?? 1) * noot.sterkte;
     const duur = noot.duur * this.klok.stapDuur;
     const uit = this.kanaal(g, laag.instrument);
+    // Op elke boem duiken bas en akkoorden even weg: het pompende geluid van moderne pop.
+    if (laag.instrument === 'boem') {
+      g.pomp.gain.cancelScheduledValues(t);
+      g.pomp.gain.setValueAtTime(0.35, t);
+      g.pomp.gain.linearRampToValueAtTime(1, t + this.klok.stapDuur * 3);
+    }
     if (instrument.soort === 'slag' || noot.trap === null) {
       instrument.speel(g.mixer, uit, t, 0, duur, sterkte);
       return;

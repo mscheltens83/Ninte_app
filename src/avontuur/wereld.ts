@@ -6,7 +6,7 @@ import { brugMaten, heeftVleugel, type AvontuurStand, type RobotStand } from './
 import { TERRASSEN, HEUVEL_TRAPPEN, terreinHoogte, torenTrappen, bewonerPos } from './landschap';
 
 /** Iets in de wereld waar je bij kunt drukken op E of de knop. Met `doe` kan elk onderdeel van het spel zijn eigen actie toevoegen. */
-export interface Interactie { id: string; naam: string; x: number; y?:number; z: number; soort: 'gebied' | 'materiaal' | 'bewoner' | 'vlag' | 'onderdeel' | 'vleugel' | 'actie'; gebied?: Gebied; doe?: () => void }
+export interface Interactie { id: string; naam: string; x: number; y?:number; z: number; soort: 'gebied' | 'materiaal' | 'bewoner' | 'vlag' | 'onderdeel' | 'vleugel' | 'actie'; gebied?: Gebied; doe?: () => void; /** Hoe dichtbij je moet zijn (standaard 3,8 meter). */ straal?: number }
 export const BRUG_START = WERELD.noord;
 export function bouwVleugel():THREE.Group {
   const g=new THREE.Group();for(const kant of [-1,1]){const v=blok(4,.12,2.5,kant<0?'#72cadd':'#b0dcec',kant*2,0,0);v.rotation.z=kant*.16;g.add(v);}
@@ -192,7 +192,7 @@ export class AvontuurWereld {
   }
   dichtst(p:Vec3):Interactie|undefined {
     return this.interacties.filter(i=>(i.id!=='boomhut'||this.stand.gebieden.includes('boomhut')) && Math.abs(p.y-(i.y??0))<2.8)
-      .map(i=>({i,d:Math.hypot(i.x-p.x,i.z-p.z)})).filter(v=>v.d<3.8).sort((a,b)=>a.d-b.d)[0]?.i;
+      .map(i=>({i,d:Math.hypot(i.x-p.x,i.z-p.z)/(i.straal??3.8)})).filter(v=>v.d<1).sort((a,b)=>a.d-b.d)[0]?.i;
   }
   isLand(x:number,z:number):boolean { return Math.abs(x)<=WERELD.halfBreedte&&z>=BRUG_START&&z<=WERELD.zuid || this.stand.gebieden.includes('boomhut')&&Math.abs(x)<=12&&Math.abs(z-this.hutZ())<=12 || this.stand.missies.brug.status==='voltooid'&&Math.abs(x)<=2&&z>=BRUG_START-brugMaten(this.stand).doel&&z<=BRUG_START; }
   robotBeeld(route:RobotRoute,s:RobotStand) {

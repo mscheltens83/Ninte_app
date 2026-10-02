@@ -94,6 +94,7 @@ export class NepAudioContext {
   createBufferSource() { return new NepBufferBron(this); }
   createBiquadFilter() { return Object.assign(new NepNode(this), { type: 'lowpass', frequency: new NepParam(), Q: new NepParam(), gain: new NepParam() }); }
   createStereoPanner() { return Object.assign(new NepNode(this), { pan: new NepParam() }); }
+  createWaveShaper() { return Object.assign(new NepNode(this), { curve: null as unknown, oversample: 'none' }); }
   createConvolver() { return Object.assign(new NepNode(this), { buffer: null as unknown, normalize: true }); }
   createDynamicsCompressor() {
     return Object.assign(new NepNode(this), { threshold: new NepParam(), ratio: new NepParam(), attack: new NepParam(), release: new NepParam(), knee: new NepParam() });
