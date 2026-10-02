@@ -197,6 +197,8 @@ export class Meespeelmuziek {
 
   update(dt: number) {
     this.energie.update(dt);
+    // Ook elk beeldje plannen, niet alleen via de timer (die kan haperen als het beeld druk is).
+    if (this.graaf && this.klok.aanHetLopen && this.graaf.ctx.state === 'running') this.klok.tik(this.graaf.ctx.currentTime);
     if (this.energie.aantalPunten < 1) this.reeks = 0;
     if (this.actief && this.aan && !this.klok.aanHetLopen) this.probeerStart();
     const echt = this.graaf && this.klok.aanHetLopen && this.graaf.ctx.state === 'running';

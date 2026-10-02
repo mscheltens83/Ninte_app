@@ -331,7 +331,8 @@ export class DeurenObby {
 
   /** Is de speler op (of boven) dit parcours? Dan wachten de dieren bij de start. */
   bevat(x: number, z: number): boolean {
-    return x > this.beginX + 1.5 && Math.abs(z - this.zc) < 12;
+    // Ook een eindgrens: anders telt alles ver naar het oosten (zoals het Rijland) als obby.
+    return x > this.beginX + 1.5 && x < this.finishPunt.x + 10 && Math.abs(z - this.zc) < 12;
   }
 
   /** Waar de dieren wachten terwijl je de obby doet. */

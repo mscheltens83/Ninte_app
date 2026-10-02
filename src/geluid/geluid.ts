@@ -19,6 +19,10 @@ export class Geluid {
       if (!this.ctx) {
         const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         this.ctx = new AC();
+        // De iPad zet het geluid soms stil (na wisselen van app of een melding).
+        // Elke tik of toets maakt het weer wakker.
+        const wakker = () => { if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume().catch(() => {}); };
+        for (const soort of ['pointerdown', 'touchend', 'keydown'] as const) document.addEventListener(soort, wakker, { capture: true, passive: true });
       }
       if (this.ctx.state === 'suspended') void this.ctx.resume();
     } catch {

@@ -131,6 +131,7 @@ export class Spel {
   private boostTijd = 0;
   private laatsteMelding = -99;
   private rijKnop = document.createElement('button');
+  private rijToggle = document.createElement('button');
   private raceTijd = document.createElement('div');
   private eiVraagTeller = 0;
   private aankleding: Aankleding;
@@ -306,6 +307,16 @@ export class Spel {
     this.rijKnop.setAttribute('aria-label', 'Mijn rijdieren');
     this.rijKnop.onclick = () => this.toonDierenboek();
     document.getElementById('knoppen-rechts')!.prepend(this.rijKnop);
+    // Grote rijknop boven de springknop: op- en afstappen met één tik (of de R-toets).
+    this.rijToggle.id = 'rijknop';
+    this.rijToggle.onclick = () => this.wisselRijden();
+    this.hud.hud.append(this.rijToggle);
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyR' || this.modus !== 'spelen' || (e.target instanceof HTMLElement && e.target.closest('input,textarea,select'))) return;
+      e.preventDefault();
+      this.wisselRijden();
+    });
+    this.zetRijKnop();
     this.raceTijd.id = 'race-tijd';
     this.raceTijd.hidden = true;
     this.hud.hud.append(this.raceTijd);
@@ -804,7 +815,9 @@ export class Spel {
     this.rijModel = new RijModel(plan, d.variant);
     this.scene.add(this.rijModel.groep);
     this.stand.rijden.rijdt = nr;
+    this.stand.rijden.laatste = nr;
     this.avatar.rijdt = true;
+    this.zetRijKnop();
     if (d.soort === PONY_ID && this.pony) this.pony.groep.visible = false;
     this.rijSnelheid = snelheidVan(d.soort, d.variant);
     this.rijSprong = sprongVan(d.soort);
@@ -816,12 +829,34 @@ export class Spel {
     this.hud.toonBanner(`🐎 Je rijdt op ${veilig(naam)}! ⚡ ${String(this.rijSnelheid).replace('.', ',')}`, null, { goed: true, duur: 3500 });
   }
 
+  /** Op- of afstappen. Opstappen kiest het dier waarop je het laatst reed, anders je pony. */
+  wisselRijden() {
+    if (this.modus !== 'spelen') return;
+    if (this.rijModel) { this.stapAf(); return; }
+    const r = this.stand.rijden;
+    const nr = r.laatste !== null && dierMetNr(r, r.laatste) ? r.laatste : this.stand.pony ? 0 : r.dieren[0]?.nr;
+    if (nr === undefined) {
+      this.hud.toonBanner('Je hebt nog geen rijdier. Ga door de regenboogpoort naar het Rijland en tem een wild dier!', null, { duur: 5000 });
+      return;
+    }
+    if (this.huidigeObby()) { this.hud.meld('In de obby loop je zelf'); return; }
+    this.stapOp(nr);
+  }
+
+  private zetRijKnop() {
+    const rijdt = !!this.rijModel;
+    this.rijToggle.textContent = rijdt ? '⬇️' : '🐴';
+    this.rijToggle.classList.toggle('rijdt', rijdt);
+    this.rijToggle.setAttribute('aria-label', rijdt ? 'Afstappen' : 'Opstappen en rijden');
+  }
+
   stapAf(stil = false) {
     if (!this.rijModel) return;
     this.scene.remove(this.rijModel.groep);
     this.rijModel = null;
     this.stand.rijden.rijdt = null;
     this.avatar.rijdt = false;
+    this.zetRijKnop();
     if (this.pony) this.pony.groep.visible = true;
     this.boostTijd = 0;
     bewaarStand(this.stand);

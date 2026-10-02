@@ -4,6 +4,8 @@
 
 export const STAPPEN_PER_TEL = 4;
 export const STAPPEN_PER_MAAT = 16;
+/** Zoveel seconden plannen we vooruit. */
+export const VOORUIT = 0.5;
 
 /** Wordt aangeroepen voor elke stap. Mag `klok.bpm` aanpassen; dat geldt dan vanaf deze stap. */
 export type Planner = (stap: number, tijd: number) => void;
@@ -41,13 +43,21 @@ export class Klok {
     this.loopt = false;
   }
 
-  /** Plan alle stappen die binnen `vooruit` seconden vallen. Elke ~25 ms aanroepen. */
-  tik(nu: number, vooruit = 0.15) {
+  /**
+   * Plan alle stappen die binnen `vooruit` seconden vallen. Zo vaak mogelijk aanroepen
+   * (timer én elk beeldje). Ruim vooruit plannen voorkomt gaten als het beeld even hapert.
+   */
+  tik(nu: number, vooruit = VOORUIT) {
     if (!this.loopt) return;
-    // Achterop geraakt (tabblad verborgen, apparaat sliep)? Dan niet alles inhalen.
-    if (this.volgendeTijd < nu - 0.25) {
+    // Lang achterop geraakt (tabblad verborgen, apparaat sliep)? Dan niet alles inhalen.
+    if (this.volgendeTijd < nu - 1) {
       this.volgendeTijd = nu + 0.02;
       this.anker = { tijd: this.volgendeTijd, stap: this.volgendeStap, bpm: this.bpm };
+    }
+    // Een beetje achter? Sla de gemiste stappen over, in de maat, in plaats van ze allemaal tegelijk te spelen.
+    while (this.volgendeTijd < nu - 0.05) {
+      this.volgendeTijd += this.stapDuur;
+      this.volgendeStap++;
     }
     let veiligheid = 64;
     while (this.volgendeTijd < nu + vooruit && veiligheid-- > 0) {

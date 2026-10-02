@@ -242,6 +242,7 @@ export class Aankleding {
         for (const kant of [BAAN - 5, BAAN + 5]) {
           for (const [x, z] of [[W + n, Z + s * kant], [W + s * kant, Z + n]]) {
             if (Math.abs(x - RANCH.start.x) < 3 && Math.abs(z - RANCH.start.z) < 8) continue;
+            if (Math.hypot(x - RANCH.terugPoort.x, z - RANCH.terugPoort.z) < 6) continue;
             g.add(blokOp(0.2, 2.6, 0.2, '#2b2340', x, 0, z));
             const kleur = kleuren[Math.abs(n / 15 + 3 + s) % kleuren.length];
             let mat = this.lampen.get(kleur);

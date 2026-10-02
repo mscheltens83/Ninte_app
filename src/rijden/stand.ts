@@ -17,6 +17,8 @@ export interface RijStand {
   eiPlekken: Record<string, number>;
   /** Nummer van het dier waarop je rijdt (0 = je pony), of null als je loopt. */
   rijdt: number | null;
+  /** Het dier waarop je het laatst reed: de rijknop zet je daar weer op. */
+  laatste: number | null;
   /** Beste racetijd in seconden. */
   record: number | null;
   /** 0 = geen, 1 brons, 2 zilver, 3 goud. */
@@ -30,7 +32,7 @@ export const MAX_EIEREN = 9;
 export const PONY_NR = 0;
 
 export function nieuwRijden(): RijStand {
-  return { dieren: [], eieren: { gewoon: 0, zeldzaam: 0, goud: 0 }, eiPlekken: {}, rijdt: null, record: null, medaille: 0, volgendNr: 1 };
+  return { dieren: [], eieren: { gewoon: 0, zeldzaam: 0, goud: 0 }, eiPlekken: {}, rijdt: null, laatste: null, record: null, medaille: 0, volgendNr: 1 };
 }
 
 export function voegDierToe(s: RijStand, soort: string, variant: Variant): MijnDier | null {
@@ -97,6 +99,9 @@ export function valideerRijden(data: unknown): { stand: RijStand; aangepast: boo
   } else if (r.eiPlekken !== undefined) aangepast = true;
   if (r.rijdt === null || r.rijdt === undefined) stand.rijdt = null;
   else if (heel(r.rijdt, 0, 1e9) && (r.rijdt === PONY_NR || stand.dieren.some((d) => d.nr === r.rijdt))) stand.rijdt = r.rijdt as number;
+  else aangepast = true;
+  if (r.laatste === null || r.laatste === undefined) stand.laatste = null;
+  else if (heel(r.laatste, 0, 1e9) && (r.laatste === PONY_NR || stand.dieren.some((d) => d.nr === r.laatste))) stand.laatste = r.laatste as number;
   else aangepast = true;
   if (r.record === null || r.record === undefined) stand.record = null;
   else if (typeof r.record === 'number' && Number.isFinite(r.record) && r.record > 0 && r.record < 3600) stand.record = r.record;

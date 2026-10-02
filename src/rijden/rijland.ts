@@ -63,13 +63,13 @@ export function poortVan(b: Biome): { x: number; z: number } {
 export const RANCH = {
   broedhuis: { x: W, z: Z + 18 },
   wei: { x: W + 21, z: Z, b: 16, d: 16 },
-  terugPoort: { x: W, z: Z + 32 },
+  terugPoort: { x: W, z: Z + 39 },
   start: { x: W - BAAN, z: Z },
 } as const;
 /** De regenboogpoort op het dorpsplein, naar het Rijland. */
 export const PORTAAL_DORP = { x: 14, z: -44 } as const;
 /** Waar je in het Rijland aankomt. */
-export const AANKOMST = { x: W, y: 0, z: Z + 27 } as const;
+export const AANKOMST = { x: W, y: 0, z: Z + 27 } as const; // met de camera vóór de terugpoort
 
 /** Klimtorens met een ei bovenop: piramide, sneeuwberg en cupcake. */
 export const KLIMTORENS = [

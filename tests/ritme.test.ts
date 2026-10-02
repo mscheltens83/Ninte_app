@@ -165,7 +165,7 @@ describe('maatklok', () => {
     klok.tik(0);
     const voor = gepland.length;
     klok.tik(100);
-    expect(gepland.length - voor).toBeLessThan(4);
+    expect(gepland.length - voor).toBeLessThan(8);
   });
 });
 
