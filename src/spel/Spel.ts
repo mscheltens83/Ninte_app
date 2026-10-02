@@ -43,6 +43,13 @@ import { BouwWereld, INGANG, KAVEL_MIDDEN } from '../bouwen/wereld';
 import { BouwModus } from '../bouwen/bouwModus';
 import { BOUW_OPDRACHTEN } from '../bouwen/opdrachten';
 import { opKavel } from '../bouwen/onderdelen';
+import { AANKOMST, PORTAAL_DORP, RANCH, Rijland, inRijland } from '../rijden/rijland';
+import { EI_PLEKKEN, EiWereld } from '../rijden/eieren';
+import { MEDAILLES, Race, medailleVoor } from '../rijden/race';
+import { RijModel } from '../rijden/model';
+import { EIEREN, PONY_ID, rijdier, snelheidVan, sprongVan, type Bouwplan } from '../rijden/dieren';
+import { dierMetNr, pakEi } from '../rijden/stand';
+import { broedhuisScherm, dierLabel, dierenboekScherm } from '../rijden/schermen';
 
 const LOOPSNELHEID = 8;
 const SPRONGSNELHEID = 10.5;
@@ -110,6 +117,17 @@ export class Spel {
   private bouwWereld: BouwWereld;
   private bouwModus: BouwModus;
   private bouwTipGezien = false;
+  private rijland: Rijland;
+  private eiWereld: EiWereld;
+  private race = new Race();
+  private rijModel: RijModel | null = null;
+  private rijSnelheid = 1;
+  private rijSprong = 1;
+  private boostTijd = 0;
+  private laatsteMelding = -99;
+  private rijKnop = document.createElement('button');
+  private raceTijd = document.createElement('div');
+  private eiVraagTeller = 0;
   private meter: Muziekmeter;
   private dierDans: (() => void)[] = [];
   private laatsteTel = 0;
@@ -171,6 +189,11 @@ export class Spel {
     this.eiland = bouwEiland(this.scene, this.fysica);
     this.feest = new Feestwereld(this.scene, this.fysica, { zuinig: stand.beeldkwaliteit === 'zuinig' });
     this.bouwWereld = new BouwWereld(this.scene, this.fysica, stand.bouwen);
+    this.rijland = new Rijland(this.scene, this.fysica);
+    this.eiWereld = new EiWereld(this.scene, stand.rijden.eiPlekken);
+    const poort = new THREE.Group();
+    this.scene.add(poort);
+    this.rijland.regenboogPoort(poort, PORTAAL_DORP.x, PORTAAL_DORP.z, Math.PI / 2);
     this.bouwModus = new BouwModus({
       wereld: this.bouwWereld,
       stand: stand.bouwen,
@@ -252,6 +275,27 @@ export class Spel {
       this.avontuur.wereld.interacties.push(i);
     }
     this.feest.dansvloer.voegToe(this.bouwWereld.bas, 'veer', { sterkte: 0.8 });
+    // Het Rijland: broedhuis, poorten en de racebaan.
+    const rijActies: Record<string, () => void> = {
+      broedhuis: () => this.toonBroedhuis(),
+      'rijland-terug': () => this.reisNaarDorp(),
+      'race-start': () => this.startRace(),
+    };
+    for (const i of this.rijland.interacties) {
+      i.doe = rijActies[i.id];
+      this.avontuur.wereld.interacties.push(i);
+    }
+    this.avontuur.wereld.interacties.push({ id: 'naar-rijland', naam: '🌈 Naar het Rijland', x: PORTAAL_DORP.x, y: 0, z: PORTAAL_DORP.z, soort: 'actie', straal: 4.5, doe: () => this.reisNaarRijland() });
+    this.leven.opLand = (x, z) => this.avontuur.wereld.isLand(x, z) || inRijland(x, z, 3);
+    this.rijKnop.className = 'ronde-knop';
+    this.rijKnop.textContent = '🐎';
+    this.rijKnop.setAttribute('aria-label', 'Mijn rijdieren');
+    this.rijKnop.onclick = () => this.toonDierenboek();
+    document.getElementById('knoppen-rechts')!.prepend(this.rijKnop);
+    this.raceTijd.id = 'race-tijd';
+    this.raceTijd.hidden = true;
+    this.hud.hud.append(this.raceTijd);
+    if (stand.rijden.rijdt !== null) this.stapOp(stand.rijden.rijdt, true);
     // De bewoners wiegen en veren mee op de muziek.
     this.avontuur.wereld.bewoners.forEach((b, i) => {
       this.feest.dansvloer.voegToe(b.groep, 'veer', { sterkte: 0.8, fase: i * 0.13 });
@@ -571,6 +615,7 @@ export class Spel {
     this.hud.verbergBanner();
     if (this.ritme.beatmakerOpen) this.ritme.sluitBeatmaker();
     if (this.bouwModus.isOpen) this.bouwModus.sluit(false);
+    this.stopRace();
     this.ritme.demp(true);
     this.ritme.zetAan(false);
     bewaarStand(this.stand);
@@ -633,6 +678,7 @@ export class Spel {
       this.updateSpeler(dt);
       if (this.stand.introStap === 0 && new THREE.Vector3(this.speler.pos.x, 0, this.speler.pos.z).distanceTo(this.introStart) > 1.5) this.introVerder(1);
       for (const o of this.obbies) this.verwerk(o, o.obby.update(dt, this.speler));
+      this.updateRijden(dt);
       this.verwerkGeheimen(this.geheimen.update(dt, this.speler));
       for (const tik of this.besturing.neemTikken()) this.tik(tik.x, tik.y);
     } else {
@@ -645,6 +691,8 @@ export class Spel {
     if (this.modus === 'spelen' || this.modus === 'scherm' || this.modus === 'bouwen') this.ritme.speel(this.muziekPlek());
     this.bouwWereld.update(this.speler.pos);
     this.bouwTip();
+    this.rijland.update(dt, this.rijModel ? this.rijSnelheid : 1);
+    this.rijland.zetWeiDieren([...this.stand.rijden.dieren].reverse().filter((d, i, a) => a.findIndex((x) => x.soort === d.soort) === i));
     this.ritme.update(dt);
     this.updateDieren(dt);
     this.leven.update(dt, this.speler.pos);
@@ -713,6 +761,7 @@ export class Spel {
   /** Bouwen op de kavel: de camera gaat omhoog en Ninte tikt om te bouwen. */
   startBouwen() {
     if (this.modus !== 'spelen') return;
+    this.stopRace();
     this.geluid.klik();
     this.modus = 'bouwen';
     this.besturing.aan = false;
@@ -721,6 +770,226 @@ export class Spel {
     this.hud.verbergBanner();
     this.bouwModus.start();
     spreek('Hoi! Ik ben Bas de bouwer. Kies onderin wat je wilt bouwen en tik op het veld.');
+  }
+
+  // ---------- Rijden, eieren en racen ----------
+
+  /** Het bouwplan van Ninte haar eigen pony, met haar gekozen kleuren. */
+  private ponyPlan(): Bouwplan {
+    const v = vachtVan(PONY_KLEUREN, this.stand.pony?.kleur ?? 'bruin');
+    return { vorm: 'paard', lijf: v.lijf, accent: v.manen, licht: '#5a4638', oren: 'punt', staart: 'pluim', vlekken: v.vlekken, hoorn: !!this.pony?.isMagisch, schaal: 0.92 };
+  }
+
+  /** Op een dier stappen (nummer 0 = je pony). */
+  stapOp(nr: number, stil = false) {
+    const d = dierMetNr(this.stand.rijden, nr);
+    if (!d || (d.soort === PONY_ID && !this.stand.pony)) return;
+    this.stapAf(true);
+    const plan = d.soort === PONY_ID ? this.ponyPlan() : rijdier(d.soort)!.plan;
+    this.rijModel = new RijModel(plan, d.variant);
+    this.scene.add(this.rijModel.groep);
+    this.stand.rijden.rijdt = nr;
+    this.avatar.rijdt = true;
+    if (d.soort === PONY_ID && this.pony) this.pony.groep.visible = false;
+    this.rijSnelheid = snelheidVan(d.soort, d.variant);
+    this.rijSprong = sprongVan(d.soort);
+    bewaarStand(this.stand);
+    if (stil) return;
+    const naam = dierLabel(d, this.stand.pony?.naam ?? 'Pony').naam;
+    this.geluid.hinnik();
+    this.effecten.stof(new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 0.1, this.speler.pos.z), 1);
+    this.hud.toonBanner(`🐎 Je rijdt op ${veilig(naam)}! ⚡ ${String(this.rijSnelheid).replace('.', ',')}`, null, { goed: true, duur: 3500 });
+  }
+
+  stapAf(stil = false) {
+    if (!this.rijModel) return;
+    this.scene.remove(this.rijModel.groep);
+    this.rijModel = null;
+    this.stand.rijden.rijdt = null;
+    this.avatar.rijdt = false;
+    if (this.pony) this.pony.groep.visible = true;
+    this.boostTijd = 0;
+    bewaarStand(this.stand);
+    if (!stil) this.hud.meld('Afgestapt');
+  }
+
+  /** Grondhoogte onder een punt, met de botsblokken (voor dieren in het Rijland). */
+  private grondOnder(x: number, z: number, vanaf: number): number {
+    const afstand = this.fysica.straal({ x, y: vanaf + 3, z }, { x: 0, y: -1, z: 0 }, 14);
+    return afstand >= 14 ? vanaf : vanaf + 3 - afstand;
+  }
+
+  /** Eén keer per beeldje tijdens het spelen: eieren pakken, springkussens, poorten en de race. */
+  private updateRijden(dt: number) {
+    const p = this.speler.pos;
+    const rijdt = !!this.rijModel;
+    if (rijdt && (this.zweeft || this.huidigeObby())) {
+      this.stapAf(true);
+      if (this.huidigeObby()) this.hud.meld('In de obby loop je zelf');
+    }
+    this.boostTijd = Math.max(0, this.boostTijd - dt);
+    if (inRijland(p.x, p.z, 2)) {
+      if (this.speler.opGrond && this.rijland.opSpringkussen(p)) {
+        this.speler.snelheid.y = TRAMPOLINE_SNELHEID;
+        this.speler.opGrond = false;
+        this.coyote = 0;
+        this.geluid.boing();
+      }
+      if (this.rijland.opSnelstrook(p)) {
+        if (this.boostTijd < 0.5) this.geluid.spring();
+        this.boostTijd = 2.5;
+      }
+      const dicht = this.rijland.dichtePoortBij(p, rijdt ? this.rijSnelheid : 1);
+      if (dicht && this.tijd - this.laatsteMelding > 6) {
+        this.laatsteMelding = this.tijd;
+        const tekst = `Deze poort gaat open voor dieren met snelheid ${String(dicht.minSnelheid).replace('.', ',')} of meer. Broed eieren uit voor een sneller dier!`;
+        this.hud.toonBanner(`${dicht.icoon} ${tekst}`, () => spreek(tekst), { duur: 6000 });
+        spreek(tekst);
+      }
+    }
+    const ei = this.eiWereld.update(dt, p);
+    if (ei) {
+      const soort = EIEREN.find((e) => e.id === ei.soort)!;
+      if (pakEi(this.stand.rijden, ei.soort)) {
+        this.eiWereld.gepakt(ei);
+        this.geluid.magie();
+        this.effecten.glinster(new THREE.Vector3(ei.x, ei.y + 1, ei.z), soort.kleur);
+        this.effecten.ring(new THREE.Vector3(ei.x, ei.y + 0.2, ei.z), soort.kleur, 2.5);
+        this.ritme.moment('goed');
+        bewaarStand(this.stand);
+        const tekst = `${soort.naam} gevonden! Breng het naar het broedhuis bij de Reuzenboom in het Rijland.`;
+        this.hud.toonBanner(`${soort.icoon} ${tekst}`, () => spreek(tekst), { goed: true, duur: 4500 });
+      } else if (this.tijd - this.laatsteMelding > 6) {
+        this.laatsteMelding = this.tijd;
+        this.hud.toonBanner(`Je tas zit vol met ${soort.naam.toLowerCase()}eren. Broed er eerst een paar uit in het broedhuis!`, null, { duur: 4500 });
+      }
+    }
+    for (const g of this.race.update(dt, p)) {
+      if (g.soort === 'tel') { this.hud.meld(String(g.getal)); this.geluid.klik(); }
+      else if (g.soort === 'start') { this.hud.meld('GO!'); this.geluid.goed(); }
+      else if (g.soort === 'ring') { this.geluid.munt(); this.effecten.ring(new THREE.Vector3(p.x, p.y + 1, p.z), '#ffd23f', 3); }
+      else if (g.soort === 'finish') this.raceKlaar(g.tijd);
+      else this.raceTijd.hidden = true;
+    }
+    if (this.race.bezig) {
+      const ring = this.race.doelRing;
+      this.raceTijd.textContent = ring === null ? '⏱ Klaar voor de start…' : `⏱ ${this.race.tijd.toFixed(1).replace('.', ',')} s · ring ${ring + 1}/8`;
+      if (!inRijland(p.x, p.z, 10)) this.stopRace();
+    }
+    this.rijland.markeerRing(this.race.doelRing);
+  }
+
+  private startRace() {
+    if (this.modus !== 'spelen') return;
+    this.zetSpeler({ x: RANCH.start.x, y: 0, z: RANCH.start.z + 3 }, Math.PI);
+    this.race.start();
+    this.raceTijd.hidden = false;
+    const tekst = 'Rijd zo snel als je kunt door alle ringen. De gouden ring is de volgende!';
+    this.hud.toonBanner(`🏁 ${tekst}`, () => spreek(tekst), { duur: 4000 });
+    spreek(tekst);
+  }
+
+  private stopRace() {
+    this.race.stop();
+    this.raceTijd.hidden = true;
+    this.rijland.markeerRing(null);
+  }
+
+  private raceKlaar(tijd: number) {
+    const r = this.stand.rijden;
+    this.raceTijd.hidden = true;
+    const medaille = medailleVoor(tijd);
+    const record = r.record === null || tijd < r.record;
+    let hoefijzers = r.record === null ? 10 : record ? 5 : 0;
+    if (medaille > r.medaille) {
+      hoefijzers += [0, 5, 10, 20][medaille];
+      r.medaille = medaille;
+    }
+    if (record) r.record = tijd;
+    bewaarStand(this.stand);
+    this.geluid.fanfare();
+    this.effecten.vuurwerk(new THREE.Vector3(this.speler.pos.x, this.speler.pos.y + 6, this.speler.pos.z), 3);
+    this.ritme.moment('feest');
+    if (hoefijzers) this.geefHoefijzers(hoefijzers);
+    const tekst = `Finish! ${String(tijd).replace('.', ',')} seconden.${medaille ? ` ${MEDAILLES[medaille].slice(3)}!` : ''}${record ? ' Nieuw record!' : ''}`;
+    this.hud.toonBanner(`🏁 ${veilig(tekst)} ${medaille ? MEDAILLES[medaille].slice(0, 2) : ''}`, () => spreek(tekst), { goed: true, duur: 6000 });
+    spreek(tekst);
+  }
+
+  reisNaarRijland() {
+    if (this.modus !== 'spelen' && this.modus !== 'scherm') return;
+    this.geluid.magie();
+    this.zetSpeler(AANKOMST, Math.PI);
+    if (!this.stand.geheimen.includes('rijland')) {
+      this.stand.geheimen.push('rijland');
+      bewaarStand(this.stand);
+      const tekst = 'Welkom in het Rijland! Zoek eieren en breng ze naar het broedhuis bij de Reuzenboom. Snellere dieren openen de poorten naar nieuwe gebieden.';
+      this.hud.toonBanner(`🌈 ${tekst}`, () => spreek(tekst), { duur: 9000 });
+      spreek(tekst);
+    }
+  }
+
+  reisNaarDorp() {
+    this.stopRace();
+    this.geluid.magie();
+    this.zetSpeler({ x: PORTAAL_DORP.x - 4, y: 0, z: PORTAAL_DORP.z }, -Math.PI / 2);
+  }
+
+  /** Een leervraag voor een blauw of gouden ei: om en om spelling en rekenen. */
+  private eiVraag(): Vraag {
+    this.eiVraagTeller++;
+    if (this.eiVraagTeller % 2 === 0) return kiesSommen(this.stand.sommen).map(rekenVraag)[0];
+    const bank = oefenWoorden(this.stand.weekwoorden, this.stand.alleenWeekwoorden, this.stand.categorieen);
+    return spellingVraag(kiesWoorden(bank, this.stand.woorden, 1)[0] ?? bank[0]);
+  }
+
+  toonBroedhuis() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.pauzeer();
+    broedhuisScherm({
+      stand: this.stand.rijden,
+      ponyNaam: this.stand.pony?.naam ?? 'Pony',
+      vraag: () => this.eiVraag(),
+      opAntwoord: (v, goed, eerste) => {
+        if (!eerste) return;
+        const stats = this.stats(v);
+        stats[v.sleutel] = verwerkAntwoord(stats[v.sleutel], goed, Date.now());
+        if (v.soort === 'rekenen') { if (goed) this.stand.dag.sommenGoed++; else this.stand.dag.sommenFout++; }
+        bewaarStand(this.stand);
+      },
+      opUitgebroed: () => {
+        this.ritme.moment('feest');
+        bewaarStand(this.stand);
+      },
+      opRijden: (nr) => { this.hervat(); this.stapOp(nr); },
+      spreek: (t) => spreek(t),
+      geluid: { klik: () => this.geluid.klik(), goed: () => this.geluid.goed(), fout: () => this.geluid.fout(), magie: () => this.geluid.fanfare() },
+      opSluit: () => { this.geluid.klik(); this.hervat(); },
+    });
+  }
+
+  toonDierenboek() {
+    if (this.modus !== 'spelen') return;
+    this.geluid.klik();
+    this.pauzeer();
+    const p = this.speler.pos;
+    const nu = Date.now();
+    const liggend = EI_PLEKKEN.filter((e) => this.eiWereld.ligtEr(e.id, nu)).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+    const eiTip = liggend.length ? `Het dichtstbijzijnde ei ligt ${liggend[0].hint}.` : 'Alle eieren zijn gevonden. Over een paar minuten liggen er nieuwe!';
+    const inRij = inRijland(p.x, p.z, 5);
+    dierenboekScherm({
+      stand: this.stand.rijden,
+      ponyNaam: this.stand.pony?.naam ?? 'Pony',
+      heeftPony: !!this.stand.pony,
+      inRijland: inRij,
+      eiTip,
+      opRijden: (nr) => { this.hervat(); this.stapOp(nr); },
+      opAfstappen: () => { this.hervat(); this.stapAf(); },
+      opReis: () => { this.hervat(); if (inRij) this.reisNaarDorp(); else this.reisNaarRijland(); },
+      klik: () => this.geluid.klik(),
+      opSluit: () => { this.geluid.klik(); this.hervat(); },
+    });
   }
 
   /** De eerste keer op de kavel: vertel hoe je begint met bouwen. */
@@ -943,14 +1212,15 @@ export class Spel {
     const rz = -cos * b.y - sin * b.x;
     const grip = s.opGrond ? 14 : 6;
     const k = Math.min(1, dt * grip);
-    if(!this.zweeft){s.snelheid.x += (rx * LOOPSNELHEID - s.snelheid.x) * k;s.snelheid.z += (rz * LOOPSNELHEID - s.snelheid.z) * k;}
+    const vaart = LOOPSNELHEID * (this.rijModel ? this.rijSnelheid : 1) * (this.boostTijd > 0 ? 1.5 : 1);
+    if(!this.zweeft){s.snelheid.x += (rx * vaart - s.snelheid.x) * k;s.snelheid.z += (rz * vaart - s.snelheid.z) * k;}
 
     const wilSpringen = this.besturing.wilSpringen();
     if (wilSpringen) this.springBuffer = SPRING_BUFFER;
     this.coyote = s.opGrond ? COYOTE_TIJD : this.coyote - dt;
     if (this.springBuffer > 0 && this.coyote > 0 && this.terugTimer < 0) {
       if (this.stand.introStap === 1) this.introVerder(2);
-      s.snelheid.y = SPRONGSNELHEID;
+      s.snelheid.y = SPRONGSNELHEID * (this.rijModel ? this.rijSprong : 1);
       this.coyote = 0;
       this.springBuffer = 0;
       s.opGrond = false;
@@ -993,10 +1263,16 @@ export class Spel {
     if (dansen && !this.dansen) this.vindGeheim('dansje', 'Dansfeest!', `${this.stand.speler} gaat dansen!`);
     this.dansen = dansen;
 
-    const tempo = Math.min(1, Math.hypot(s.snelheid.x, s.snelheid.z) / LOOPSNELHEID);
+    const tempo = Math.min(1, Math.hypot(s.snelheid.x, s.snelheid.z) / vaart);
     const tel = this.ritme.tel;
-    const wip = this.avatar.animeer(dt, tempo, !this.wasOpGrond, dansen, tel);
-    this.avatar.groep.position.set(s.pos.x, s.pos.y + wip, s.pos.z);
+    const wip = this.avatar.animeer(dt, tempo, !this.wasOpGrond, dansen && !this.rijModel, tel);
+    if (this.rijModel) {
+      // Het rijdier loopt onder Ninte, zij zit in het zadel.
+      this.rijModel.groep.position.set(s.pos.x, s.pos.y, s.pos.z);
+      this.rijModel.groep.rotation.y = this.kijkHoek;
+      this.rijModel.update(dt, tempo, !this.wasOpGrond);
+      this.avatar.groep.position.set(s.pos.x, s.pos.y + this.rijModel.zadel - 0.95, s.pos.z);
+    } else this.avatar.groep.position.set(s.pos.x, s.pos.y + wip, s.pos.z);
     this.avatar.groep.rotation.y = this.kijkHoek + (dansen ? Math.sin((tel * Math.PI) / 2) * 0.6 : 0);
 
     // Regenboogspoor (beloning uit de schatkist)
@@ -1073,7 +1349,7 @@ export class Spel {
     this.camAfstand = THREE.MathUtils.clamp(this.camAfstand + d.zoom, 5, 22);
 
     const s = this.speler.pos;
-    const doel = new THREE.Vector3(s.x, s.y + 1.8, s.z);
+    const doel = new THREE.Vector3(s.x, s.y + 1.8 + (this.rijModel ? 1.1 : 0), s.z);
     // Bij een val in het water blijft de camera even boven het water hangen.
     if (doel.y < WATER_HOOGTE + 1.5) doel.y = WATER_HOOGTE + 1.5;
     this.camDoel.lerp(doel, Math.min(1, dt * 12));
@@ -1119,6 +1395,10 @@ export class Spel {
     const voor = new THREE.Vector3(Math.sin(this.kijkHoek), 0, Math.cos(this.kijkHoek));
     const grens = EILAND_RAND - 1;
     const opEiland = (v: THREE.Vector3) => {
+      if (inRijland(s.x, s.z, 6)) {
+        v.y = this.grondOnder(v.x, v.z, s.y);
+        return v;
+      }
       if (s.z < -35) {
         const hz = this.avontuur.wereld.hutZ();
         const opGeheim = s.z < WERELD.noord-10 && this.stand.avontuur.gebieden.includes('boomhut');

@@ -17,7 +17,9 @@ Zie [HANDLEIDING.md](HANDLEIDING.md) voor starten op Windows, bediening, aanpass
 - **Feestwereld:** lampjesslingers boven de paden, dansende bloemen, dieren en bewoners die op de maat bewegen, en een discopodium met dansvloer en beatmaker (met reken-uitdagingen en een DJ-koptelefoon als beloning).
 - **Muziek:** standaard de MP3-nummers. In ⚙️ kun je kiezen voor *Meespeel*: zelfgemaakte muziek die drukker wordt als Ninte dingen goed doet.
 
-Uitbreiden: zie `src/bouwen/LEESMIJ.md` en `src/ritme/LEESMIJ.md`.
+- **Rijden en het Rijland:** met 🐎 kies je een rijdier, bijvoorbeeld je eigen pony. Rijden is sneller en je springt hoger. Door de regenboogpoort op het dorpsplein kom je in het Rijland. Daar staat de Reuzenboom met je ranch (broedhuis en dierenwei), en eromheen liggen vier gebieden: Bloemenweide, Zandduinen, Sneeuwland en Snoepland. Hun poorten gaan pas open met een dier dat snel genoeg is. Zoek eieren en broed ze uit: witte eieren gaan vanzelf open, blauwe en gouden eieren na een spelling- of rekenvraag. Er zijn 13 dieren in vier zeldzaamheden, met glitter-, goud- en regenboogvarianten. Verder zijn er springkussens, snelheidsstroken, klimtorens met eieren bovenop en een racebaan met brons, zilver en goud.
+
+Uitbreiden: zie `src/bouwen/LEESMIJ.md`, `src/ritme/LEESMIJ.md` en `src/rijden/LEESMIJ.md`.
 
 ## Leren en veilig bewaren
 

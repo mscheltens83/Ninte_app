@@ -54,6 +54,8 @@ export function overlapt(b: Botser, l: Lichaam, x = l.pos.x, y = l.pos.y, z = l.
 
 export class Fysica {
   botsers: Botser[] = [];
+  /** Alleen de blokken in de buurt van het lichaam dat nu beweegt (veel sneller met een grote wereld). */
+  private kandidaten: Botser[] = [];
 
   voegToe(b: Botser): Botser {
     this.botsers.push(b);
@@ -65,7 +67,7 @@ export class Fysica {
   }
 
   private vrij(l: Lichaam, x: number, y: number, z: number): boolean {
-    for (const b of this.botsers) if (this.botst(b) && overlapt(b, l, x, y, z)) return false;
+    for (const b of this.kandidaten) if (this.botst(b) && overlapt(b, l, x, y, z)) return false;
     return true;
   }
 
@@ -75,6 +77,12 @@ export class Fysica {
     const afstand = Math.max(Math.abs(s.x), Math.abs(s.y), Math.abs(s.z)) * dt;
     const stappen = Math.max(1, Math.ceil(afstand / MAX_STAP_PER_DEELSTAP));
     const h = dt / stappen;
+    // Eerst grof filteren: blokken buiten bereik van deze beweging doen niet mee.
+    const bereik = afstand + l.straal + 1;
+    const p = l.pos;
+    this.kandidaten = this.botsers.filter((b) =>
+      b.max.x >= p.x - bereik && b.min.x <= p.x + bereik && b.max.z >= p.z - bereik && b.min.z <= p.z + bereik
+      && b.max.y >= p.y - afstand - 1 && b.min.y <= p.y + l.hoogte + afstand + STAPHOOGTE + 1);
     let opGrond = false;
     let grond: Botser | null = null;
     for (let i = 0; i < stappen; i++) {
@@ -94,7 +102,7 @@ export class Fysica {
     if (delta === 0) return;
     const nieuw = { ...l.pos };
     nieuw[as] += delta;
-    for (const b of this.botsers) {
+    for (const b of this.kandidaten) {
       if (!this.botst(b) || !overlapt(b, l, nieuw.x, nieuw.y, nieuw.z)) continue;
       const stap = b.max.y - l.pos.y;
       if (magStappen && stap > 0 && stap <= STAPHOOGTE && this.vrij(l, nieuw.x, b.max.y + MARGE, nieuw.z)) {
@@ -114,7 +122,7 @@ export class Fysica {
   private beweegVerticaal(l: Lichaam, delta: number): Botser | null {
     let y = l.pos.y + delta;
     let geland: Botser | null = null;
-    for (const b of this.botsers) {
+    for (const b of this.kandidaten) {
       if (!this.botst(b) || !overlapt(b, l, l.pos.x, y, l.pos.z)) continue;
       if (delta <= 0) {
         y = b.max.y;
@@ -126,7 +134,7 @@ export class Fysica {
     }
     // Staat het lichaam precies op een blok, dan telt dat ook als grond.
     if (!geland && delta <= 0) {
-      for (const b of this.botsers) {
+      for (const b of this.kandidaten) {
         if (this.botst(b) && Math.abs(y - b.max.y) < 1e-3 && overlapt(b, l, l.pos.x, y - 0.01, l.pos.z)) {
           geland = b;
           break;

@@ -1,0 +1,47 @@
+/* Broedhuis en dierenboek */
+.rij-kaart { width: min(820px, 100%); text-align: center; }
+.eieren-rij { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.ei-kaart { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 18px; background: #f8f4ff; border: 3px solid #ece4ff; }
+.ei-kaart .knop { width: 100%; margin: 6px 0 0; font-size: 14px; }
+
+/* Een ei getekend met CSS: ovaal met stipjes */
+.css-ei { display: inline-block; width: 34px; height: 44px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; vertical-align: middle;
+  background: radial-gradient(circle at 30% 35%, var(--stip) 0 9%, transparent 10%), radial-gradient(circle at 68% 55%, var(--stip) 0 8%, transparent 9%),
+    radial-gradient(circle at 40% 72%, var(--stip) 0 7%, transparent 8%), radial-gradient(circle at 35% 25%, #ffffffaa 0 12%, transparent 30%), var(--ei);
+  box-shadow: inset -4px -6px 0 rgba(0, 0, 0, 0.08), 0 3px 0 rgba(43, 35, 64, 0.15); }
+.css-ei.groot { width: 92px; height: 118px; margin: 6px auto; display: block; }
+.css-ei.wiebel { animation: wiebel 0.35s ease-in-out infinite; }
+@keyframes wiebel { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg) scale(1.05); } }
+
+.broed-vak { min-height: 120px; margin: 10px 0; }
+.broed-vraag { font-size: 22px; font-weight: 700; }
+.broed-keuzes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+.broed-keuzes .knop { width: auto; min-width: 140px; font-size: 22px; }
+
+.onthulling { width: 150px; height: 150px; margin: 8px auto; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle, #ffffff 0 35%, var(--zeld) 36% 100%); box-shadow: 0 0 0 6px #fff, 0 0 30px 8px var(--zeld); animation: onthul 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.onthulling .dier-icoon { font-size: 74px; }
+@keyframes onthul { from { transform: scale(0.2) rotate(-40deg); opacity: 0; } }
+.zeld-label { display: inline-block; padding: 2px 10px; border-radius: 12px; background: var(--zeld, #ddd); color: #fff; font-weight: 800; font-size: 13px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25); }
+
+.eier-telling { font-size: 20px; font-weight: 800; }
+.eier-telling .css-ei { width: 22px; height: 29px; }
+.dieren-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 10px 0; text-align: center; }
+.dier-kaart { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 16px; border: 3px solid var(--zeld); background: #fff; }
+.dier-kaart .dier-icoon { font-size: 38px; line-height: 1.1; }
+.dier-kaart .zeld-label { background: var(--zeld); }
+.dier-kaart .knop { width: 100%; margin: 4px 0 0; font-size: 14px; }
+.dier-kaart.rijdt { box-shadow: 0 0 0 4px #ffd23f; }
+.dier-kaart.onbekend { opacity: 0.55; border-style: dashed; }
+
+/* Racetijd bovenin */
+#race-tijd { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 18px; border-radius: 20px;
+  background: #2b2340; color: #fff; font: 800 24px/1 var(--lettertype); pointer-events: none; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2); }
+#race-tijd[hidden] { display: none; }
+
+@media (max-width: 600px) {
+  .eieren-rij { grid-template-columns: 1fr; }
+  .ei-kaart { flex-direction: row; justify-content: space-between; }
+  .ei-kaart .knop { width: auto; margin: 0; }
+  .dieren-raster { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); }
+}

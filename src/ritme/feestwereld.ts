@@ -10,6 +10,7 @@ import { terreinHoogte } from '../avontuur/landschap';
 import type { Interactie } from '../avontuur/wereld';
 import { Dansvloer, puls } from './dansen';
 import { opKavel } from '../bouwen/onderdelen';
+import { PORTAAL_DORP } from '../rijden/rijland';
 
 /** Het discopodium staat aan de oostkant van het dorpsplein. */
 export const PODIUM = { x: 20, z: -70 } as const;
@@ -63,6 +64,7 @@ function vrijVoorBloem(x: number, z: number): boolean {
   if ([...MATERIAALPLEKKEN, ...VLIEG_ONDERDELEN].some((p) => Math.hypot(p.x - x, p.z - z) < 4)) return false;
   if (Math.hypot(x - 107, z + 115) < 5) return false; // vleugelrek
   if (opKavel(x, z, 4)) return false; // Ninte haar bouwkavel blijft vrij
+  if (Math.hypot(x - PORTAAL_DORP.x, z - PORTAAL_DORP.z) < 7) return false; // de regenboogpoort
   // Niet half op een trap of een terrasrand.
   const h = terreinHoogte(x, z);
   return [[0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]].every(([dx, dz]) => terreinHoogte(x + dx, z + dz) === h);

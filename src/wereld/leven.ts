@@ -63,6 +63,8 @@ export class Leven {
   private vis: Vis | null = null;
   private visTimer = 4;
   private tijd = 0;
+  /** Optioneel: ligt hier land (vasteland, Rijland)? Dan springt er geen vis. */
+  opLand: ((x: number, z: number) => boolean) | null = null;
 
   constructor(private scene: THREE.Scene, private effecten: Effecten) {
     const rng = zaadRng(99);
@@ -113,11 +115,11 @@ export class Leven {
         const r = 9 + Math.random() * 14;
         const x = speler.x + Math.cos(hoek) * r;
         const z = speler.z + Math.sin(hoek) * r;
-        if (!isWater(x, z)) continue;
+        if (!isWater(x, z) || this.opLand?.(x, z)) continue;
         const sprong = new THREE.Vector3(Math.cos(hoek + 1.6), 0, Math.sin(hoek + 1.6)).multiplyScalar(3.2);
         const van = new THREE.Vector3(x, WATER_HOOGTE, z);
         const naar = van.clone().add(sprong);
-        if (!isWater(naar.x, naar.z)) continue;
+        if (!isWater(naar.x, naar.z) || this.opLand?.(naar.x, naar.z)) continue;
         const groep = maakVis();
         this.scene.add(groep);
         this.vis = { groep, van, naar, tijd: 0 };

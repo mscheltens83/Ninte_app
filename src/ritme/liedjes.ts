@@ -302,7 +302,7 @@ export const LIEDJES: Lied[] = [
 /** Waar in de wereld je bent. Gebieden van de avonturenwereld hebben hun eigen naam. */
 export type MuziekPlek =
   | 'eiland' | 'obby' | 'geheim' | 'podium' | 'wereld'
-  | 'dorp' | 'brug' | 'winkel' | 'bos' | 'pizza' | 'lab' | 'tuin' | 'boomhut' | 'toren' | 'kavel';
+  | 'dorp' | 'brug' | 'winkel' | 'bos' | 'pizza' | 'lab' | 'tuin' | 'boomhut' | 'toren' | 'kavel' | 'rijland';
 
 /** Welk liedje er op welke plek speelt. */
 export const PLEK_LIED: Record<MuziekPlek, string> = {
@@ -321,6 +321,7 @@ export const PLEK_LIED: Record<MuziekPlek, string> = {
   boomhut: 'boomhut',
   toren: 'toren',
   kavel: 'boomhut',
+  rijland: 'eiland',
 };
 
 export function liedVoor(plek: MuziekPlek): Lied {

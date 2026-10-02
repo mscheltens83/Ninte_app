@@ -52,6 +52,8 @@ export class Avatar {
   private flapper: THREE.Group | null = null; // cape of vleugels
   private fase = 0;
   private tijd = 0;
+  /** Zit ze op een rijdier? Dan zit ze in het zadel. */
+  rijdt = false;
 
   constructor(uiterlijk: Uiterlijk = STANDAARD_UITERLIJK) {
     this.uiterlijk = { ...uiterlijk };
@@ -260,6 +262,16 @@ export class Avatar {
   animeer(dt: number, tempo: number, inDeLucht: boolean, dansen = false, tel?: number): number {
     this.tijd += dt;
     this.animeerFlapper(tempo, inDeLucht);
+    if (this.rijdt) {
+      // In het zadel: benen naar voren en wijd, handen aan de teugels.
+      this.linkerBeen.rotation.set(-1.35, 0, -0.32);
+      this.rechterBeen.rotation.set(-1.35, 0, 0.32);
+      this.linkerArm.rotation.set(-0.75, 0, 0);
+      this.rechterArm.rotation.set(-0.75, 0, 0);
+      return 0;
+    }
+    this.linkerBeen.rotation.z = 0;
+    this.rechterBeen.rotation.z = 0;
     if (dansen) {
       // Met een tel van de muziek danst ze precies op de maat: elke tel een wip.
       this.fase = tel === undefined ? this.fase + dt * 7 : (tel + 0.5) * Math.PI;

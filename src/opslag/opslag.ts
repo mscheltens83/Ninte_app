@@ -7,6 +7,7 @@ import type { Categorie, Woordkaart } from '../leren/woorden';
 import { nieuwAvontuur, valideerAvontuur, type AvontuurStand } from '../avontuur/logica';
 import { nieuwRitme, valideerRitme, type RitmeStand } from '../ritme/stand';
 import { nieuweBouw, valideerBouw, type BouwStand } from '../bouwen/stand';
+import { nieuwRijden, valideerRijden, type RijStand } from '../rijden/stand';
 
 export type DierenTaak = 'voeren' | 'borstelen' | 'apporteren';
 export interface DagVoortgang {
@@ -76,6 +77,8 @@ export interface Spelstand {
   ritme: RitmeStand;
   /** Alles wat op de bouwkavel staat, en de gehaalde bouwopdrachten. */
   bouwen: BouwStand;
+  /** Rijdieren, eieren en de racetijd. */
+  rijden: RijStand;
 }
 
 const SLEUTEL = 'nintes-wereld';
@@ -136,6 +139,7 @@ export function nieuweStand(): Spelstand {
     avontuur: nieuwAvontuur(),
     ritme: nieuwRitme(),
     bouwen: nieuweBouw(),
+    rijden: nieuwRijden(),
   };
 }
 
@@ -242,6 +246,9 @@ export function valideerStand(data: unknown): { stand: Spelstand; aangepast: boo
   const bouwen = valideerBouw(r.bouwen);
   stand.bouwen = bouwen.stand;
   aangepast ||= bouwen.aangepast;
+  const rijden = valideerRijden(r.rijden);
+  stand.rijden = rijden.stand;
+  aangepast ||= rijden.aangepast;
   return { stand, aangepast };
 }
 
@@ -311,7 +318,7 @@ export function leesBackUp(tekst: string): Spelstand {
   const r = record(data);
   if (!r || r.formaat !== 'nintes-wereld-voortgang' || r.versie !== 1) throw new Error('Kies een back-up van Nintes Wereld.');
   const inhoud = record(r.stand);
-  if (!inhoud || !Object.keys(nieuweStand()).filter(k => !['avontuur', 'ritme', 'bouwen'].includes(k)).every((k) => Object.hasOwn(inhoud, k)))
+  if (!inhoud || !Object.keys(nieuweStand()).filter(k => !['avontuur', 'ritme', 'bouwen', 'rijden'].includes(k)).every((k) => Object.hasOwn(inhoud, k)))
     throw new Error('Deze back-up is onvolledig. Je huidige voortgang is behouden.');
   const resultaat = valideerStand(r.stand);
   if (resultaat.aangepast) throw new Error('Deze back-up bevat ongeldige gegevens. Je huidige voortgang is behouden.');
